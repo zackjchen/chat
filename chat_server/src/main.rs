@@ -1,5 +1,5 @@
 use anyhow::Result;
-use chat::{get_router, AppConfig};
+use chat_server::{get_router, AppConfig};
 use tracing::{info, level_filters::LevelFilter};
 use tracing_subscriber::{
     fmt::Layer, layer::SubscriberExt as _, util::SubscriberInitExt as _, Layer as _,
