@@ -1,5 +1,9 @@
 pub mod config;
+pub mod error;
 pub mod handlers;
+pub mod models;
+use error::AppError;
+use models::*;
 use std::{ops::Deref, sync::Arc};
 
 use axum::{
