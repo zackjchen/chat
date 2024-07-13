@@ -1,2 +1,13 @@
 server:
     port: 6688
+    db_url: postgre://zackjchen:postgres@localhost:5432/chat
+auth:
+    sk: |
+        -----BEGIN PRIVATE KEY-----
+        MC4CAQAwBQYDK2VwBCIEIM91Z+kKxBk5T52JdCc7TKQ1IV2QRF2cYUiz4+gpBjry
+        -----END PRIVATE KEY-----
+
+    pk: |
+        -----BEGIN PUBLIC KEY-----
+        MCowBQYDK2VwAyEAjqeRd8PNvS9n2SSxC0QsCtHyMvIcATozLSVI6MT94TM=
+        -----END PUBLIC KEY-----

@@ -10,7 +10,7 @@ cargo install sqlx-cli --no-default-features  --features rustls --features postg
 create database chat
 # 命令行 dropdb chat
 # 命令行 createdb chat
-# sqlx migration run
+# sqlx migrate run
 
 # 3.创建一个, 里面会生成一个<timestamp>_<initial>.sql脚本
 sqlx migrate add initial

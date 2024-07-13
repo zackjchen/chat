@@ -6,12 +6,46 @@ use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
 };
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateUser {
+    pub email: String,
+    pub fullname: String,
+    pub password: String,
+}
+
+impl CreateUser {
+    pub fn new(
+        email: impl Into<String>,
+        fullname: impl Into<String>,
+        password: impl Into<String>,
+    ) -> Self {
+        Self {
+            email: email.into(),
+            fullname: fullname.into(),
+            password: password.into(),
+        }
+    }
+}
+
+impl SigninUser {
+    pub fn new(email: impl Into<String>, password: impl Into<String>) -> Self {
+        Self {
+            email: email.into(),
+            password: password.into(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SigninUser {
+    pub email: String,
+    pub password: String,
+}
 
 impl User {
-    pub async fn find_by_email(
-        email: String,
-        pool: &sqlx::PgPool,
-    ) -> Result<Option<Self>, AppError> {
+    pub async fn find_by_email(email: &str, pool: &sqlx::PgPool) -> Result<Option<Self>, AppError> {
         // let rec = sqlx::query_as!(User, r#"select id,fullname,email, created_at from users where email = $1"#, email)
         // .fetch_optional(pool).await?;
 
@@ -24,43 +58,44 @@ impl User {
         Ok(rec)
     }
 
-    pub async fn create(
-        email: &str,
-        fullname: &str,
-        password: &str,
-        pool: &sqlx::PgPool,
-    ) -> Result<Self, AppError> {
+    pub async fn create(input: &CreateUser, pool: &sqlx::PgPool) -> Result<Self, AppError> {
+        let password_hash = hash_password(&input.password)?;
+        let user = Self::find_by_email(&input.email, pool).await?;
+        if let Some(user) = user {
+            return Err(AppError::EmailAlreadyExists(user.email));
+        }
+
         let user = sqlx::query_as(
             r#"insert into users (fullname, email, password_hash) values ($1, $2, $3) returning id,fullname,email, created_at"#
         )
-        .bind(fullname)
-        .bind(email)
-        .bind(password)
+        .bind(&input.fullname)
+        .bind(&input.email)
+        .bind(password_hash)
         .fetch_one(pool)
         .await?;
 
         Ok(user)
     }
 
-    pub async fn verify(
-        email: &str,
-        password: &str,
-        pool: &sqlx::PgPool,
-    ) -> Result<bool, AppError> {
+    pub async fn verify(input: SigninUser, pool: &sqlx::PgPool) -> Result<Option<User>, AppError> {
         let user: Option<User> = sqlx::query_as(
             r#"select id,fullname,email, password_hash,created_at from users where email = $1"#,
         )
-        .bind(email)
+        .bind(input.email)
         .fetch_optional(pool)
         .await?;
 
         match user {
             Some(mut user) => {
                 let password_hash = mem::take(&mut user.password_hash).unwrap_or_default();
-                let is_valid = verify_password(password, &password_hash)?;
-                Ok(is_valid)
+                let is_valid = verify_password(&input.password, &password_hash)?;
+                if is_valid {
+                    Ok(Some(user))
+                } else {
+                    Ok(None)
+                }
             }
-            None => Ok(false),
+            None => Ok(None),
         }
     }
 }
@@ -102,10 +137,28 @@ mod tests {
         let email = "zackjchen@hkjc.org.hk";
         let fullname = "zackjchen";
         let password = "hunter42";
-        let user = User::create(email, fullname, password, &pool).await?;
+        let input = CreateUser {
+            email: email.into(),
+            fullname: fullname.into(),
+            password: password.into(),
+        };
+        let user = User::create(&input, &pool).await?;
 
         assert_eq!(user.email, email);
         assert_eq!(user.fullname, fullname);
+
+        let input = SigninUser {
+            email: "zackjchen@hkjc.org.hk".into(),
+            password: "hunter42".into(),
+        };
+
+        let res = User::verify(input, &pool).await?;
+        if let Some(user) = res {
+            assert_eq!(user.email, email);
+            assert_eq!(user.fullname, fullname);
+        } else {
+            panic!("User not found");
+        }
 
         Ok(())
     }

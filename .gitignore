@@ -1,1 +1,3 @@
 /target
+/chat_server/fixtures
+/chat_server/test.rest

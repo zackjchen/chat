@@ -5,12 +5,19 @@ use std::fs;
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AppConfig {
     pub server: ServerConfig,
+    pub auth: AuthConfig,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ServerConfig {
     // pub host: String,
     pub port: u16,
+    pub db_url: String,
+}
+#[derive(Debug, Deserialize, Serialize)]
+pub struct AuthConfig {
+    pub sk: String,
+    pub pk: String,
 }
 
 impl AppConfig {
@@ -29,5 +36,17 @@ impl AppConfig {
         };
 
         Ok(ret?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    pub fn test_config() -> anyhow::Result<()> {
+        let config = AppConfig::load()?;
+        println!("{:?}", config);
+        Ok(())
     }
 }
