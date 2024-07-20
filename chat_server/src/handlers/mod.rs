@@ -1,5 +1,4 @@
 use axum::response::IntoResponse;
-
 pub mod auth;
 pub mod chat;
 pub mod messages;

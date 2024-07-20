@@ -1,24 +1,27 @@
 pub mod config;
 pub mod error;
 pub mod handlers;
+pub mod middleware;
 pub mod models;
 pub mod utils;
-use error::AppError;
-use models::*;
-use std::{fmt::Debug, ops::Deref, sync::Arc};
-use utils::jwt::{DecodingKey, EncodingKey};
-
 use axum::{
+    middleware::from_fn_with_state,
     routing::{get, patch, post},
     Router,
 };
 pub use config::*;
+use error::AppError;
 use handlers::{
     auth::*,
     chat::*,
     index_handler,
     messages::{list_message_handler, send_message_handler},
 };
+use middleware::auth::verify_token;
+use middleware::set_layer;
+use models::*;
+use std::{fmt::Debug, ops::Deref, sync::Arc};
+use utils::jwt::{DecodingKey, EncodingKey};
 
 #[derive(Debug, Clone)]
 pub(crate) struct AppState {
@@ -68,8 +71,6 @@ impl AppState {
 pub async fn get_router(config: AppConfig) -> Result<Router, AppError> {
     let state = AppState::try_new(config).await?;
     let api = Router::new()
-        .route("/signin", post(signin_handler))
-        .route("/signup", post(signup_handler))
         .route(
             "/chat",
             get(list_chat_handler)
@@ -82,12 +83,18 @@ pub async fn get_router(config: AppConfig) -> Result<Router, AppError> {
                 .delete(delete_chat_handler)
                 .post(send_message_handler),
         )
-        .route("/chat/:id/messages", get(list_message_handler));
+        .route("/chat/:id/messages", get(list_message_handler))
+        .layer(from_fn_with_state(state.clone(), verify_token))
+        // 这里是因为登陆和注册还没有token，所以不需要验证token
+        .route("/signin", post(signin_handler))
+        .route("/signup", post(signup_handler));
 
-    Ok(Router::new()
+    let app = Router::new()
         .route("/", get(index_handler))
         .nest("/api", api)
-        .with_state(state))
+        .with_state(state);
+
+    Ok(set_layer(app))
 }
 
 #[cfg(test)]
