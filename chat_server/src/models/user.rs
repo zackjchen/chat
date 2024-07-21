@@ -125,13 +125,14 @@ mod tests {
     use anyhow::Result;
     use sqlx_db_tester::TestPg;
 
+    use crate::{AppConfig, AppState};
+
     use super::*;
     #[tokio::test]
     async fn create_user_should_work() -> Result<()> {
-        let tdb = TestPg::new(
-            "postgresql://zackjchen:postgres@localhost:5432".into(),
-            Path::new("../migrations"),
-        );
+        // let tdb = TestPg::new("postgre:".into(), Path::new("../migrations"));
+        // let pool = tdb.get_pool().await;
+        let (tdb, _) = AppState::new_for_test(AppConfig::load()?).await?;
         let pool = tdb.get_pool().await;
 
         let email = "zackjchen@hkjc.org.hk";

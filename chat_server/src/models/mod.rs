@@ -14,3 +14,16 @@ pub(crate) struct User {
     pub password_hash: Option<String>,
     pub created_at: DateTime<Utc>,
 }
+
+#[cfg(test)]
+impl User {
+    pub fn new(id: i64, email: &str, fullname: &str, password: &str) -> Self {
+        Self {
+            id,
+            email: email.to_string(),
+            fullname: fullname.to_string(),
+            password_hash: Some(password.to_string()),
+            created_at: Utc::now(),
+        }
+    }
+}

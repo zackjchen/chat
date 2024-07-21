@@ -107,10 +107,10 @@ impl AppState {
 
         let ek = EncodingKey::load(&config.auth.sk).expect("load encoding key failed");
         let dk = DecodingKey::load(&config.auth.pk).expect("load decoding key failed");
-        let server_url = config.server.db_url.split('/').next().unwrap().into();
-        // 当缺省的时候它应该自己会补齐这个 postgre://zackjchen:postgres@localhost:5432
-        assert_eq!(server_url, "postgre:");
-        let tgp: TestPg = TestPg::new(server_url, std::path::Path::new("../migrations"));
+        let index = config.server.db_url.rfind('/').expect("invalid db_url");
+        let server_url = &config.server.db_url[..index];
+        // server_url postgre://zackjchen:postgres@localhost:5432
+        let tgp: TestPg = TestPg::new(server_url.into(), std::path::Path::new("../migrations"));
         let pool = tgp.get_pool().await;
         let state = Self {
             inner: Arc::new(AppStateInner {
