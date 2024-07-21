@@ -45,3 +45,54 @@ pub(crate) async fn verify_token(
     };
     next.run(req).await
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{AppConfig, User};
+
+    use super::*;
+    use anyhow::Result;
+    use axum::{
+        body::Body, extract::Request, middleware::from_fn_with_state, routing::get, Router,
+    };
+    use tower::ServiceExt;
+
+    async fn handler(_req: Request) -> impl IntoResponse {
+        (StatusCode::OK, "Ok")
+    }
+    #[tokio::test]
+    async fn test_verify_token_middleware_should_work() -> Result<()> {
+        let config = AppConfig::load()?;
+        let (_, state) = AppState::new_for_test(config).await?;
+
+        let user = User::new(1, "zack.j.chen@hkjc.org.hk", "Zack", "Jiajia520,");
+        let token = state.ek.sign(user)?;
+
+        let app = Router::new()
+            .route("/test", get(handler))
+            .layer(from_fn_with_state(state.clone(), verify_token))
+            .with_state(state);
+
+        let req = Request::builder()
+            .uri("/test")
+            .header("Authorization", format!("Bearer {}", token))
+            .body(Body::empty())?;
+
+        let res = app.clone().oneshot(req).await?;
+        assert_eq!(res.status(), StatusCode::OK);
+
+        // no token
+        let req2 = Request::builder().uri("/test").body(Body::empty())?;
+        let res = app.clone().oneshot(req2).await?;
+        assert_eq!(res.status(), StatusCode::UNAUTHORIZED);
+
+        // bad token
+        let req2 = Request::builder()
+            .uri("/test")
+            .header("Authorization", "Bearer bad_token")
+            .body(Body::empty())?;
+        let res = app.clone().oneshot(req2).await?;
+        assert_eq!(res.status(), StatusCode::FORBIDDEN);
+        Ok(())
+    }
+}
