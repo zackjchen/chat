@@ -16,6 +16,7 @@ use handlers::{
     chat::*,
     index_handler,
     messages::{list_message_handler, send_message_handler},
+    workspace::list_chat_users_handler,
 };
 use middleware::auth::verify_token;
 use middleware::set_layer;
@@ -71,6 +72,7 @@ impl AppState {
 pub async fn get_router(config: AppConfig) -> Result<Router, AppError> {
     let state = AppState::try_new(config).await?;
     let api = Router::new()
+        .route("/users", get(list_chat_users_handler))
         .route(
             "/chat",
             get(list_chat_handler)

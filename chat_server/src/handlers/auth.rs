@@ -54,7 +54,12 @@ mod tests {
     async fn test_signup_handler() -> Result<()> {
         let config = AppConfig::load()?;
         let (_tgp, state) = AppState::new_for_test(config).await?;
-        let input = CreateUser::new("zack.j.chen@hkjc.org.hk", "zackjchen", "hunter42");
+        let input = CreateUser::new(
+            "default",
+            "zack.j.chen@hkjc.org.hk",
+            "zackjchen",
+            "hunter42",
+        );
         let res = signup_handler(State(state), Json(input))
             .await?
             .into_response();
@@ -71,8 +76,8 @@ mod tests {
     async fn test_duplicate_signup_handler_should_409() -> Result<()> {
         let config = AppConfig::load()?;
         let (_tgp, state) = AppState::new_for_test(config).await?;
-        let input1 = CreateUser::new("zackjchen@hkjc.org.hk", "zackjchen", "hunter43");
-        let input2 = CreateUser::new("zackjchen@hkjc.org.hk", "zackjchen", "hunter43");
+        let input1 = CreateUser::new("default", "zackjchen@hkjc.org.hk", "zackjchen", "hunter43");
+        let input2 = CreateUser::new("default", "zackjchen@hkjc.org.hk", "zackjchen", "hunter43");
 
         let _res1 = signup_handler(State(state.clone()), Json(input1))
             .await?
@@ -98,7 +103,7 @@ mod tests {
     async fn test_signin_handler() -> Result<()> {
         let config = AppConfig::load()?;
         let (_tgp, state) = AppState::new_for_test(config).await?;
-        let input = CreateUser::new("zackjchen@hkjc.org.hk", "zackjchen", "hunter43");
+        let input = CreateUser::new("default", "zackjchen@hkjc.org.hk", "zackjchen", "hunter43");
         let _res1 = signup_handler(State(state.clone()), Json(input))
             .await?
             .into_response();
@@ -141,7 +146,12 @@ mod tests {
     async fn create_duplicate_user_should_failed() -> Result<()> {
         let config = AppConfig::load()?;
         let (_tdb, state) = AppState::new_for_test(config).await?;
-        let input = CreateUser::new("zack.j.chen@hkjc.org.hk", "zackjchen", "hunter43");
+        let input = CreateUser::new(
+            "default",
+            "zack.j.chen@hkjc.org.hk",
+            "zackjchen",
+            "hunter43",
+        );
         User::create(&input, &state.pool).await?;
         let res2 = User::create(&input, &state.pool).await;
         match res2 {

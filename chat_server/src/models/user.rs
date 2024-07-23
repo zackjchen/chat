@@ -1,7 +1,7 @@
 #![allow(unused)]
 use std::mem;
 
-use crate::{AppError, User};
+use crate::{config, AppError, User, WorkSpace};
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
@@ -13,10 +13,12 @@ pub struct CreateUser {
     pub email: String,
     pub fullname: String,
     pub password: String,
+    pub workspace: String,
 }
-
+#[cfg(test)]
 impl CreateUser {
     pub fn new(
+        ws_name: impl Into<String>,
         email: impl Into<String>,
         fullname: impl Into<String>,
         password: impl Into<String>,
@@ -25,10 +27,11 @@ impl CreateUser {
             email: email.into(),
             fullname: fullname.into(),
             password: password.into(),
+            workspace: ws_name.into(),
         }
     }
 }
-
+#[cfg(test)]
 impl SigninUser {
     pub fn new(email: impl Into<String>, password: impl Into<String>) -> Self {
         Self {
@@ -49,28 +52,39 @@ impl User {
         // let rec = sqlx::query_as!(User, r#"select id,fullname,email, created_at from users where email = $1"#, email)
         // .fetch_optional(pool).await?;
 
-        let rec =
-            sqlx::query_as(r#"select id,fullname,email, created_at from users where email = $1"#)
-                .bind(email)
-                .fetch_optional(pool)
-                .await?;
+        let rec = sqlx::query_as(
+            r#"select id, ws_id, fullname,email, created_at from users where email = $1"#,
+        )
+        .bind(email)
+        .fetch_optional(pool)
+        .await?;
 
         Ok(rec)
     }
 
+    // TODO: use trancaction for workspace creation
     pub async fn create(input: &CreateUser, pool: &sqlx::PgPool) -> Result<Self, AppError> {
-        let password_hash = hash_password(&input.password)?;
+        // 插入用户时，检查email是否已经存在，如果存在表示已经注册，则返回错误
         let user = Self::find_by_email(&input.email, pool).await?;
         if let Some(user) = user {
             return Err(AppError::EmailAlreadyExists(user.email));
         }
+        let password_hash = hash_password(&input.password)?;
 
-        let user = sqlx::query_as(
-            r#"insert into users (fullname, email, password_hash) values ($1, $2, $3) returning id,fullname,email, created_at"#
+        // 插入用户时，需要先判断workspace是否存在，如果不存在则创建
+        let ws = match WorkSpace::find_by_name(&input.workspace, pool).await? {
+            Some(ws) => ws,
+            None => WorkSpace::create(&input.workspace, 0, pool).await?,
+        };
+
+        // 这里需要通过workspace的name去找id然后插入
+        let user: User = sqlx::query_as(
+            r#"insert into users (fullname, email, password_hash, ws_id) values ($1, $2, $3, $4) returning id, ws_id, fullname, email, created_at"#
         )
         .bind(&input.fullname)
         .bind(&input.email)
         .bind(password_hash)
+        .bind(ws.id)
         .fetch_one(pool)
         .await?;
 
@@ -79,7 +93,7 @@ impl User {
 
     pub async fn verify(input: SigninUser, pool: &sqlx::PgPool) -> Result<Option<User>, AppError> {
         let user: Option<User> = sqlx::query_as(
-            r#"select id,fullname,email, password_hash,created_at from users where email = $1"#,
+            r#"select id, ws_id, fullname, email, password_hash,created_at from users where email = $1"#,
         )
         .bind(input.email)
         .fetch_optional(pool)
@@ -98,6 +112,16 @@ impl User {
             None => Ok(None),
         }
     }
+
+    // pub async fn add_to_workspace(&self, ws_id: i64, pool: &sqlx::PgPool) -> Result<User, AppError> {
+    //     let user = sqlx::query_as("update users set ws_id = $1 where id = $2 and ws_id = 0 returning *")
+    //         .bind(ws_id)
+    //         .bind(self.id)
+    //         .fetch_one(pool)
+    //         .await?;
+    //     Ok(user)
+
+    // }
 }
 
 fn hash_password(password: &str) -> Result<String, AppError> {
@@ -142,6 +166,7 @@ mod tests {
             email: email.into(),
             fullname: fullname.into(),
             password: password.into(),
+            workspace: "hkjc".into(),
         };
         let user = User::create(&input, &pool).await?;
 

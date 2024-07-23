@@ -48,6 +48,7 @@ mod tests {
         let dk = DecodingKey::load(decoding_key)?;
         let user_init = User {
             id: 1,
+            ws_id: 0,
             fullname: "test".to_string(),
             email: "zackjchen@hkjc.org.hk".into(),
             password_hash: None,
