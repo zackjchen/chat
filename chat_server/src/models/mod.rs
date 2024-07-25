@@ -1,3 +1,4 @@
+mod chat;
 pub mod user;
 pub mod workspace;
 use chrono::{DateTime, Utc};
@@ -44,4 +45,22 @@ pub struct WorkSpace {
     pub name: String,
     pub owner_id: i64,
     pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, FromRow, Clone, PartialEq, Eq)]
+pub struct Chat {
+    pub id: i64,
+    pub ws_id: i64,
+    pub r#type: ChatType,
+    pub name: Option<String>,
+    pub members: Vec<i64>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, sqlx::Type, Clone, PartialEq, PartialOrd, Eq)]
+pub enum ChatType {
+    Single,
+    Group,
+    PrivateChannel,
+    PublicChannel,
 }

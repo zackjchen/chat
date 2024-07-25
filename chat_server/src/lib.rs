@@ -100,29 +100,50 @@ pub async fn get_router(config: AppConfig) -> Result<Router, AppError> {
 }
 
 #[cfg(test)]
-impl AppState {
-    #[cfg(test)]
-    pub async fn new_for_test(
-        config: AppConfig,
-    ) -> Result<(sqlx_db_tester::TestPg, Self), AppError> {
-        use sqlx_db_tester::TestPg;
+mod test_utils {
+    use super::*;
+    use sqlx::{Executor, PgPool};
+    use sqlx_db_tester::TestPg;
+    impl AppState {
+        #[cfg(test)]
+        pub async fn new_for_test(config: AppConfig) -> Result<(TestPg, Self), AppError> {
+            let ek = EncodingKey::load(&config.auth.sk).expect("load encoding key failed");
+            let dk = DecodingKey::load(&config.auth.pk).expect("load decoding key failed");
+            let index = config.server.db_url.rfind('/').expect("invalid db_url");
+            let server_url = &config.server.db_url[..index];
+            println!("server_url: {:?}", server_url);
+            // server_url postgre://zackjchen:postgres@localhost:5432
+            let (tdb, pool) = test_utils::get_test_pool(Some(server_url)).await;
+            let state = Self {
+                inner: Arc::new(AppStateInner {
+                    config,
+                    ek,
+                    dk,
+                    pool,
+                }),
+            };
+            Ok((tdb, state))
+        }
+    }
 
-        let ek = EncodingKey::load(&config.auth.sk).expect("load encoding key failed");
-        let dk = DecodingKey::load(&config.auth.pk).expect("load decoding key failed");
-        let index = config.server.db_url.rfind('/').expect("invalid db_url");
-        let server_url = &config.server.db_url[..index];
-        println!("server_url: {:?}", server_url);
-        // server_url postgre://zackjchen:postgres@localhost:5432
-        let tgp: TestPg = TestPg::new(server_url.into(), std::path::Path::new("../migrations"));
-        let pool = tgp.get_pool().await;
-        let state = Self {
-            inner: Arc::new(AppStateInner {
-                config,
-                ek,
-                dk,
-                pool,
-            }),
+    pub async fn get_test_pool(url: Option<&str>) -> (TestPg, PgPool) {
+        let url = if let Some(url) = url {
+            url
+        } else {
+            "postgre://zackjchen:postgres@localhost:5432"
         };
-        Ok((tgp, state))
+        let tdb: TestPg = TestPg::new(url.into(), std::path::Path::new("../migrations"));
+        let pool = tdb.get_pool().await;
+
+        let sqls = include_str!("../fixtures/test.sql").split(';');
+        let mut ts = pool.begin().await.expect("Begin transaction failed");
+        for sql in sqls {
+            if sql.trim().is_empty() {
+                continue;
+            }
+            ts.execute(sql).await.expect("Execute sql failed");
+        }
+        ts.commit().await.expect("Commit transaction failed");
+        (tdb, pool)
     }
 }
