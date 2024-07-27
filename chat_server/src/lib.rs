@@ -6,7 +6,7 @@ pub mod models;
 pub mod utils;
 use axum::{
     middleware::from_fn_with_state,
-    routing::{get, patch, post},
+    routing::{get, post},
     Router,
 };
 pub use config::*;
@@ -74,18 +74,19 @@ pub async fn get_router(config: AppConfig) -> Result<Router, AppError> {
     let api = Router::new()
         .route("/users", get(list_chat_users_handler))
         .route(
-            "/chat",
+            "/chats",
             get(list_chat_handler)
                 .post(create_chat_handler)
                 .patch(update_chat_handler),
         )
         .route(
-            "/chat/:id",
-            patch(update_chat_handler)
+            "/chats/:id",
+            get(get_chat_handler)
+                .patch(update_chat_handler)
                 .delete(delete_chat_handler)
                 .post(send_message_handler),
         )
-        .route("/chat/:id/messages", get(list_message_handler))
+        .route("/chats/:id/messages", get(list_message_handler))
         .layer(from_fn_with_state(state.clone(), verify_token))
         // 这里是因为登陆和注册还没有token，所以不需要验证token
         .route("/signin", post(signin_handler))

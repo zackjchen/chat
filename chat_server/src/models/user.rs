@@ -1,12 +1,13 @@
 #![allow(unused)]
 use std::mem;
 
-use crate::{config, AppError, User, WorkSpace};
+use crate::{config, AppError, ChatUser, User, WorkSpace};
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
 };
 use serde::{Deserialize, Serialize};
+use sqlx::pool;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateUser {
@@ -14,6 +15,22 @@ pub struct CreateUser {
     pub fullname: String,
     pub password: String,
     pub workspace: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SigninUser {
+    pub email: String,
+    pub password: String,
+}
+
+#[cfg(test)]
+impl SigninUser {
+    pub fn new(email: impl Into<String>, password: impl Into<String>) -> Self {
+        Self {
+            email: email.into(),
+            password: password.into(),
+        }
+    }
 }
 #[cfg(test)]
 impl CreateUser {
@@ -31,20 +48,23 @@ impl CreateUser {
         }
     }
 }
-#[cfg(test)]
-impl SigninUser {
-    pub fn new(email: impl Into<String>, password: impl Into<String>) -> Self {
-        Self {
-            email: email.into(),
-            password: password.into(),
-        }
-    }
-}
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SigninUser {
-    pub email: String,
-    pub password: String,
+impl ChatUser {
+    pub async fn fetch_all(ws_id: u64, pool: &sqlx::PgPool) -> Result<Vec<Self>, AppError> {
+        let recs = sqlx::query_as(r#"select id, fullname, email from users where ws_id = $1"#)
+            .bind(ws_id as i64)
+            .fetch_all(pool)
+            .await?;
+        Ok(recs)
+    }
+
+    pub async fn fetch_by_ids(ids: &[i64], pool: &sqlx::PgPool) -> Result<Vec<Self>, AppError> {
+        let recs = sqlx::query_as(r#"select id, fullname, email from users where id = any($1)"#)
+            .bind(ids)
+            .fetch_all(pool)
+            .await?;
+        Ok(recs)
+    }
 }
 
 impl User {

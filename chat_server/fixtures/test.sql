@@ -19,7 +19,7 @@ VALUES
 
 INSERT INTO chats(ws_id, name, type, members)
 VALUES
-(1, '聊天室1', 'group', '{1,2,3,4}'),
-(1, NULL, 'single', '{1,3}'),
-(1, '聊天室3', 'public_channel', '{2,3,4}'),
-(1, '聊天室4', 'private_channel', '{1,2,4}');
+(1, '聊天室1', 'group', '{1,2,3,4}'), -- id = 1
+(1, NULL, 'single', '{1,3}'), -- id = 2
+(1, '聊天室3', 'public_channel', '{2,3,4}'), -- id = 3
+(1, '聊天室4', 'private_channel', '{1,2,4}'); -- id = 4

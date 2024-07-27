@@ -1,4 +1,4 @@
-mod chat;
+pub mod chat;
 pub mod user;
 pub mod workspace;
 use chrono::{DateTime, Utc};
@@ -58,6 +58,8 @@ pub struct Chat {
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::Type, Clone, PartialEq, PartialOrd, Eq)]
+#[sqlx(type_name = "chat_type", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum ChatType {
     Single,
     Group,
