@@ -35,6 +35,10 @@ pub enum AppError {
     CreateChatError(String),
     #[error("Not found: {0}")]
     NotFound(String),
+    #[error("IO Error: {0}")]
+    IOError(#[from] std::io::Error),
+    #[error("Unauthorized")]
+    Unauthorized,
 }
 
 impl IntoResponse for AppError {
@@ -47,6 +51,8 @@ impl IntoResponse for AppError {
             AppError::EmailAlreadyExists(_) => axum::http::StatusCode::CONFLICT,
             AppError::CreateChatError(_) => axum::http::StatusCode::BAD_REQUEST,
             AppError::NotFound(_) => axum::http::StatusCode::NOT_FOUND,
+            AppError::IOError(_) => axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            AppError::Unauthorized => axum::http::StatusCode::UNAUTHORIZED,
         };
 
         (status, Json(ErrorOutput::new(self.to_string()))).into_response()

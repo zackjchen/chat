@@ -5,6 +5,7 @@ pub mod middleware;
 pub mod models;
 pub mod utils;
 use axum::{
+    extract::DefaultBodyLimit,
     middleware::from_fn_with_state,
     routing::{get, post},
     Router,
@@ -15,13 +16,14 @@ use handlers::{
     auth::*,
     chat::*,
     index_handler,
-    messages::{list_message_handler, send_message_handler},
+    messages::{download_file_handler, list_message_handler, send_message_handler, upload_handler},
     workspace::list_chat_users_handler,
 };
 use middleware::auth::verify_token;
 use middleware::set_layer;
 use models::*;
 use std::{fmt::Debug, ops::Deref, sync::Arc};
+use tokio::fs;
 use utils::jwt::{DecodingKey, EncodingKey};
 
 #[derive(Debug, Clone)]
@@ -55,6 +57,7 @@ impl Deref for AppState {
 
 impl AppState {
     pub async fn try_new(config: AppConfig) -> Result<Self, AppError> {
+        fs::create_dir_all(&config.server.base_dir).await?;
         let ek = EncodingKey::load(&config.auth.sk).expect("load encoding key failed");
         let dk = DecodingKey::load(&config.auth.pk).expect("load decoding key failed");
         let pool = sqlx::PgPool::connect(&config.server.db_url).await?;
@@ -87,6 +90,11 @@ pub async fn get_router(config: AppConfig) -> Result<Router, AppError> {
                 .post(send_message_handler),
         )
         .route("/chats/:id/messages", get(list_message_handler))
+        .route(
+            "/upload",
+            post(upload_handler).layer(DefaultBodyLimit::max(50 * 1024 * 1024)),
+        )
+        .route("/files/:ws_id/*path", get(download_file_handler))
         .layer(from_fn_with_state(state.clone(), verify_token))
         // 这里是因为登陆和注册还没有token，所以不需要验证token
         .route("/signin", post(signin_handler))

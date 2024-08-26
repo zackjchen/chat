@@ -1,4 +1,5 @@
 pub mod chat;
+mod file;
 pub mod user;
 pub mod workspace;
 use chrono::{DateTime, Utc};
@@ -16,6 +17,12 @@ pub struct User {
     #[serde(skip)]
     pub password_hash: Option<String>,
     pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ChatFile {
+    pub ext: String,
+    pub hash: String,
 }
 
 #[cfg(test)]
