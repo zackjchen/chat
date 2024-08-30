@@ -1,7 +1,7 @@
 use crate::{
     error::{AppError, ErrorOutput},
     user::{CreateUser, SigninUser},
-    AppState, User,
+    AppState,
 };
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
@@ -15,7 +15,7 @@ pub(crate) async fn signup_handler(
     State(state): State<AppState>,
     Json(input): Json<CreateUser>,
 ) -> Result<impl IntoResponse, AppError> {
-    let user = User::create(&input, &state.pool).await?;
+    let user = state.create_user(&input).await?;
     let token = state.ek.sign(user)?;
     // let mut header = HeaderMap::new();
     // header.insert("X-Token", token.parse()?);
@@ -28,7 +28,7 @@ pub(crate) async fn signin_handler(
     State(state): State<AppState>,
     Json(input): Json<SigninUser>,
 ) -> Result<impl IntoResponse, AppError> {
-    let user = User::verify(input, &state.pool).await?;
+    let user = state.verify_user(input).await?;
     match user {
         Some(user) => {
             let token = state.ek.sign(user)?;
@@ -45,15 +45,13 @@ pub(crate) async fn signin_handler(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::AppConfig;
     use anyhow::Result;
     use http_body_util::BodyExt;
     use jwt_simple::reexports::serde_json;
 
     #[tokio::test]
     async fn test_signup_handler() -> Result<()> {
-        let config = AppConfig::load()?;
-        let (_tgp, state) = AppState::new_for_test(config).await?;
+        let (_tgp, state) = AppState::new_for_test().await?;
         let input = CreateUser::new(
             "default",
             "zack.j.chen@hkjc.org.hk",
@@ -74,8 +72,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_duplicate_signup_handler_should_409() -> Result<()> {
-        let config = AppConfig::load()?;
-        let (_tgp, state) = AppState::new_for_test(config).await?;
+        let (_tgp, state) = AppState::new_for_test().await?;
         let input1 = CreateUser::new("default", "zackjchen@hkjc.org.hk", "zackjchen", "hunter43");
         let input2 = CreateUser::new("default", "zackjchen@hkjc.org.hk", "zackjchen", "hunter43");
 
@@ -101,8 +98,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_signin_handler() -> Result<()> {
-        let config = AppConfig::load()?;
-        let (_tgp, state) = AppState::new_for_test(config).await?;
+        let (_tgp, state) = AppState::new_for_test().await?;
         let input = CreateUser::new("default", "zackjchen@hkjc.org.hk", "zackjchen", "hunter43");
         let _res1 = signup_handler(State(state.clone()), Json(input))
             .await?
@@ -123,8 +119,7 @@ mod tests {
     }
     #[tokio::test]
     async fn test_signin_with_non_exists_should_403() -> Result<()> {
-        let config = AppConfig::load()?;
-        let (_tgp, state) = AppState::new_for_test(config).await?;
+        let (_tgp, state) = AppState::new_for_test().await?;
         let input = SigninUser::new("zack.j.chen@hkjc.org.hk", "hunter42");
         let res = signin_handler(State(state), Json(input))
             .await
@@ -144,16 +139,15 @@ mod tests {
     }
     #[tokio::test]
     async fn create_duplicate_user_should_failed() -> Result<()> {
-        let config = AppConfig::load()?;
-        let (_tdb, state) = AppState::new_for_test(config).await?;
+        let (_tdb, state) = AppState::new_for_test().await?;
         let input = CreateUser::new(
             "default",
             "zack.j.chen@hkjc.org.hk",
             "zackjchen",
             "hunter43",
         );
-        User::create(&input, &state.pool).await?;
-        let res2 = User::create(&input, &state.pool).await;
+        state.create_user(&input).await?;
+        let res2 = state.create_user(&input).await;
         match res2 {
             Err(AppError::EmailAlreadyExists(e)) => assert_eq!(e, "zack.j.chen@hkjc.org.hk"),
             _ => panic!("Expecting EmailAlreadyExists error"),

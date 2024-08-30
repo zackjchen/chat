@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{error::AppError, Chat, ChatType, ChatUser};
+use crate::{error::AppError, AppState, Chat, ChatType};
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct CreateChat {
@@ -9,13 +9,9 @@ pub struct CreateChat {
     pub public: bool,
 }
 
-impl Chat {
+impl AppState {
     /// ws_id: extract from jwt token
-    pub async fn create(
-        input: CreateChat,
-        ws_id: u64,
-        pool: &sqlx::PgPool,
-    ) -> Result<Self, AppError> {
+    pub async fn create_chat(&self, input: CreateChat, ws_id: u64) -> Result<Chat, AppError> {
         let len = input.members.len();
         if len < 2 {
             return Err(AppError::CreateChatError(
@@ -28,7 +24,7 @@ impl Chat {
             ));
         }
         // verity all members is exist
-        let chat_users = ChatUser::fetch_by_ids(&input.members, pool).await?;
+        let chat_users = self.fetch_chat_user_by_ids(&input.members).await?;
         if chat_users.len() != len {
             return Err(AppError::CreateChatError(
                 "Some members not exist".to_string(),
@@ -62,13 +58,13 @@ impl Chat {
         .bind(input.name)
         .bind(chat_type)
         .bind(&input.members)
-        .fetch_one(pool)
+        .fetch_one(&self.pool)
         .await?;
 
         Ok::<Chat, AppError>(chat)
     }
 
-    pub async fn fetch_all(ws_id: u64, pool: &sqlx::PgPool) -> Result<Vec<Self>, AppError> {
+    pub async fn fetch_chats_all(&self, ws_id: u64) -> Result<Vec<Chat>, AppError> {
         let recs = sqlx::query_as(
             r#"
             SELECT id, ws_id, name, type, members, created_at
@@ -77,12 +73,12 @@ impl Chat {
             "#,
         )
         .bind(ws_id as i64)
-        .fetch_all(pool)
+        .fetch_all(&self.pool)
         .await?;
         Ok(recs)
     }
 
-    pub async fn fetch_by_id(id: u64, pool: &sqlx::PgPool) -> Result<Option<Self>, AppError> {
+    pub async fn fetch_chat_by_id(&self, id: u64) -> Result<Option<Chat>, AppError> {
         let rec = sqlx::query_as(
             r#"
             SELECT id, ws_id, name, type, members, created_at
@@ -91,7 +87,7 @@ impl Chat {
             "#,
         )
         .bind(id as i64)
-        .fetch_optional(pool)
+        .fetch_optional(&self.pool)
         .await?;
         Ok(rec)
     }
@@ -115,43 +111,48 @@ impl CreateChat {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::get_test_pool;
 
     #[tokio::test]
-    async fn test_create_single_chat_should_work() {
-        let (_tdb, pool) = get_test_pool(None).await;
+    async fn test_create_single_chat_should_work() -> anyhow::Result<()> {
+        // let (_tdb, pool) = get_test_pool(None).await;
+        let (_tdb, state) = AppState::new_for_test().await?;
         let input = CreateChat::new("", &[1, 2], false);
-        let chat = Chat::create(input, 1, &pool).await.unwrap();
+        let chat = state.create_chat(input, 1).await.unwrap();
         assert_eq!(chat.ws_id, 1);
         assert_eq!(chat.r#type, ChatType::Single);
         assert_eq!(chat.members, vec![1, 2]);
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_create_public_named_chat_should_work() {
-        let (_tdb, pool) = get_test_pool(None).await;
+    async fn test_create_public_named_chat_should_work() -> anyhow::Result<()> {
+        let (_tdb, state) = AppState::new_for_test().await?;
         let input = CreateChat::new("general", &[1, 2, 3], true);
-        let chat = Chat::create(input, 1, &pool).await.unwrap();
+        let chat = state.create_chat(input, 1).await.unwrap();
         assert_eq!(chat.ws_id, 1);
         assert_eq!(chat.members.len(), 3);
         assert_eq!(chat.r#type, ChatType::PublicChannel);
         assert_eq!(chat.members, vec![1, 2, 3]);
+        Ok(())
     }
 
     #[tokio::test]
-    async fn chat_get_by_id_should_work() {
-        let (_tdb, pool) = get_test_pool(None).await;
-        let chat = Chat::fetch_by_id(2, &pool).await.unwrap().unwrap();
+    async fn chat_get_by_id_should_work() -> anyhow::Result<()> {
+        let (_tdb, state) = AppState::new_for_test().await?;
+        let chat = state.fetch_chat_by_id(2).await.unwrap().unwrap();
         assert_eq!(chat.ws_id, 1);
         assert_eq!(chat.r#type, ChatType::Single);
         assert_eq!(chat.members, vec![1, 3]);
         assert_eq!(chat.name, None);
+        Ok(())
     }
 
     #[tokio::test]
-    async fn chat_get_all_should_work() {
-        let (_tdb, pool) = get_test_pool(None).await;
-        let chats = Chat::fetch_all(1, &pool).await.unwrap();
+    async fn chat_get_all_should_work() -> anyhow::Result<()> {
+        let (_tdb, state) = AppState::new_for_test().await?;
+        let chats = state.fetch_chats_all(1).await.unwrap();
         assert_eq!(chats.len(), 4);
+
+        Ok(())
     }
 }

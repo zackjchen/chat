@@ -33,12 +33,16 @@ pub enum AppError {
     EmailAlreadyExists(String),
     #[error("Create chat error: {0}")]
     CreateChatError(String),
+    #[error("Create message error: {0}")]
+    CreateMessageError(String),
     #[error("Not found: {0}")]
     NotFound(String),
     #[error("IO Error: {0}")]
     IOError(#[from] std::io::Error),
     #[error("Unauthorized")]
     Unauthorized,
+    #[error("Not implemented: {0}")]
+    ChatFileError(String),
 }
 
 impl IntoResponse for AppError {
@@ -53,6 +57,8 @@ impl IntoResponse for AppError {
             AppError::NotFound(_) => axum::http::StatusCode::NOT_FOUND,
             AppError::IOError(_) => axum::http::StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Unauthorized => axum::http::StatusCode::UNAUTHORIZED,
+            AppError::CreateMessageError(_) => axum::http::StatusCode::BAD_REQUEST,
+            AppError::ChatFileError(_) => axum::http::StatusCode::BAD_REQUEST,
         };
 
         (status, Json(ErrorOutput::new(self.to_string()))).into_response()

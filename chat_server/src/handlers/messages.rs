@@ -23,7 +23,7 @@ pub(crate) async fn upload_handler(
     mut mutpart: Multipart,
 ) -> Result<impl IntoResponse, AppError> {
     let ws_id = user.ws_id;
-    let base_dir = &state.config.server.base_dir.join(ws_id.to_string());
+    let base_dir = &state.config.server.base_dir;
     let mut files = vec![];
     println!("{:?}", mutpart);
     while let Some(field) = mutpart.next_field().await.unwrap() {
@@ -32,7 +32,7 @@ pub(crate) async fn upload_handler(
             warn!("Failed to read multipart file field: {:?}", filename);
             continue;
         };
-        let file = ChatFile::new(filename, &data);
+        let file = ChatFile::new(ws_id as _, filename, &data);
         let path = file.path(base_dir);
         if path.exists() {
             info!("File already exists: {:?}", path);
@@ -43,7 +43,7 @@ pub(crate) async fn upload_handler(
                 .expect("file path parent should exist");
             fs::write(path, data).await?;
         }
-        files.push(file.url(ws_id as _));
+        files.push(file.url());
     }
     Ok(Json(files))
 }
