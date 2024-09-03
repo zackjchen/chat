@@ -32,16 +32,8 @@ CREATE TABLE IF NOT EXISTS chats(
 
 BEGIN;
 INSERT INTO users (fullname, email, ws_id, password_hash) VALUES ('admin', 'super@none.org', 1, '');
--- INSERT INTO users (fullname, email, ws_id, password_hash) VALUES ('Zack Chen', 'zack.j.chen@hkjc.org.hk', 2, '$argon2id$v=19$m=19456,t=2,p=1$CMiNeL3qUUNNygX3ly7ENw$RRTU4A1Qqg4jYqAuB6k3fTpwVB3MA3OissVQsyrND4U');
--- INSERT INTO users (fullname, email, ws_id, password_hash) VALUES ('Goh Zixin', 'zixingoh@hkjc.org.hk', 2, '$argon2id$v=19$m=19456,t=2,p=1$Fql/yCxLjjJyQm05hhtK1Q$qv0Zt+H1TWzw/jrOiJKXclxdCJknFTROOzlXB9DGmWU');
-
 INSERT INTO workspaces (name, owner_id) VALUES ('default', 1);
--- INSERT INTO workspaces (name, owner_id) VALUES ('test', 1);
-
 INSERT INTO chats (name, type, ws_id, members) VALUES ('general', 'public_channel', 1, ARRAY[0]);
--- insert into chats (name, type, ws_id, members) values ('chat-1', 'single', 1, ARRAY [1, 2]);
-
-UPDATE users SET ws_id = 0 WHERE id = 0;
 COMMIT;
 ALTER TABLE users
   ADD CONSTRAINT users_ws_id_fk FOREIGN KEY (ws_id) REFERENCES workspaces(id);
