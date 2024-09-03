@@ -39,17 +39,17 @@ impl FromStr for ChatFile {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let Some(s) = s.strip_prefix("/files/") else {
-            return Err(AppError::ChatFileError("Invalid file url".to_string()));
+            return Err(AppError::ChatFileError(format!("Invalid file url: {}", s)));
         };
         let parts: Vec<&str> = s.split('/').collect();
         if parts.len() != 4 {
-            return Err(AppError::ChatFileError("Invalid file url".to_string()));
+            return Err(AppError::ChatFileError(format!("Invalid file url: {}", s)));
         }
         let ws_id = parts[0]
             .parse::<u64>()
             .map_err(|_| AppError::ChatFileError("Invalid ws_id in parse ChatFile".to_string()))?;
         let Some((part3, ext)) = parts[3].split_once('.') else {
-            return Err(AppError::ChatFileError("Invalid file url".to_string()));
+            return Err(AppError::ChatFileError(format!("Invalid file url: {}", s)));
         };
         let hash = format!("{}{}{}", parts[1], parts[2], part3);
         Ok(Self {

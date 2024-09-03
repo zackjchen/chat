@@ -92,7 +92,7 @@ impl AppState {
         // 插入用户时，需要先判断workspace是否存在，如果不存在则创建
         let ws = match self.find_workspace_by_name(&input.workspace).await? {
             Some(ws) => ws,
-            None => self.create_workspace(&input.workspace, 0).await?,
+            None => self.create_workspace(&input.workspace, 1).await?,
         };
 
         // 这里需要通过workspace的name去找id然后插入

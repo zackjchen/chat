@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod chat;
 mod request_id;
 mod server_time;
 use self::{request_id::set_request_id, server_time::ServerTimeLayer};

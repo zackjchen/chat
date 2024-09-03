@@ -41,7 +41,7 @@ pub enum AppError {
     IOError(#[from] std::io::Error),
     #[error("Unauthorized")]
     Unauthorized,
-    #[error("Not implemented: {0}")]
+    #[error("Chat File error: {0}")]
     ChatFileError(String),
 }
 

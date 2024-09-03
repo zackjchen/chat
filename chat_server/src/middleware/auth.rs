@@ -72,6 +72,7 @@ mod tests {
             .layer(from_fn_with_state(state.clone(), verify_token))
             .with_state(state);
 
+        // good token
         let req = Request::builder()
             .uri("/test")
             .header("Authorization", format!("Bearer {}", token))

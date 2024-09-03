@@ -20,6 +20,7 @@ use handlers::{
     workspace::list_chat_users_handler,
 };
 use middleware::auth::verify_token;
+use middleware::chat::verify_chat;
 use middleware::set_layer;
 use models::*;
 use std::{fmt::Debug, ops::Deref, sync::Arc};
@@ -74,22 +75,30 @@ impl AppState {
 
 pub async fn get_router(config: AppConfig) -> Result<Router, AppError> {
     let state = AppState::try_new(config).await?;
-    let api = Router::new()
-        .route("/users", get(list_chat_users_handler))
+
+    let chat_router = Router::new()
         .route(
-            "/chats",
-            get(list_chat_handler)
-                .post(create_chat_handler)
-                .patch(update_chat_handler),
-        )
-        .route(
-            "/chats/:id",
+            "/:id",
             get(get_chat_handler)
                 .patch(update_chat_handler)
                 .delete(delete_chat_handler)
                 .post(send_message_handler),
         )
-        .route("/chats/:id/messages", get(list_message_handler))
+        .route(
+            "/:id/messages",
+            get(list_message_handler).post(send_message_handler),
+        )
+        .layer(from_fn_with_state(state.clone(), verify_chat))
+        .route(
+            "/",
+            get(list_chat_handler)
+                .post(create_chat_handler)
+                .patch(update_chat_handler),
+        );
+
+    let api = Router::new()
+        .route("/users", get(list_chat_users_handler))
+        .nest("/chat", chat_router)
         .route(
             "/upload",
             post(upload_handler).layer(DefaultBodyLimit::max(50 * 1024 * 1024)),

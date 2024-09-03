@@ -1,6 +1,6 @@
 pub mod chat;
 mod file;
-mod messages;
+pub mod messages;
 pub mod user;
 pub mod workspace;
 use chrono::{DateTime, Utc};

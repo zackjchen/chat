@@ -29,7 +29,7 @@ impl AppState {
         &self,
         email: impl Into<String>,
     ) -> Result<Option<WorkSpace>, AppError> {
-        let ws = sqlx::query_as("select * from workspaces where email = &1")
+        let ws = sqlx::query_as("select * from workspaces ws join users on ws.owner_id = users.id where users.email = $1")
             .bind(email.into())
             .fetch_optional(&self.pool)
             .await?;
@@ -79,8 +79,8 @@ mod tests {
         // 创建一个user,它将会插入ws_id为1, user_id为1
         let input = CreateUser::new("test1", "email", "fullname", "password");
         let user = state.create_user(&input).await.unwrap();
-        assert_eq!(user.ws_id, 1);
-        assert_eq!(user.id, 5);
+        assert_eq!(user.ws_id, 2);
+        assert_eq!(user.id, 6);
 
         Ok(())
     }
@@ -89,11 +89,14 @@ mod tests {
     async fn workspace_create_should_work() -> Result<()> {
         let (_tdb, state) = AppState::new_for_test().await?;
         // 创建一个workspace, 默认owner_id为0
-        let ws = state.create_workspace("test", 0).await.unwrap();
-        assert_eq!(ws.name, "test");
-        assert_eq!(ws.owner_id, 0);
+        let ws = state
+            .create_workspace("test-create-workspace", 2)
+            .await
+            .unwrap();
+        assert_eq!(ws.name, "test-create-workspace");
+        assert_eq!(ws.owner_id, 2);
 
-        let input = CreateUser::new("test", "email", "fullname", "password");
+        let input = CreateUser::new("test-create-workspace", "email", "fullname", "password");
         let user = state.create_user(&input).await.unwrap();
 
         // 更新workspace的owner_id
@@ -120,7 +123,7 @@ mod tests {
         // assert_eq!(res.len(), 2);
         // assert_eq!(res[0].id, user1.id);
         // assert_eq!(res[1].id, user2.id);
-        let users = state.fetch_workspace_all_users(1).await?;
+        let users = state.fetch_workspace_all_users(2).await?;
         assert_eq!(users.len(), 4);
         Ok(())
     }

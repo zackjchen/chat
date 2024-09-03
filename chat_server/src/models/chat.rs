@@ -91,6 +91,15 @@ impl AppState {
         .await?;
         Ok(rec)
     }
+
+    pub async fn is_chat_member(&self, chat_id: i64, user_id: u64) -> Result<bool, AppError> {
+        let is_member = sqlx::query(r#"select 1 cnt from chats where id=$1 and $2 = any(members)"#)
+            .bind(chat_id)
+            .bind(user_id as i64)
+            .fetch_optional(&self.pool)
+            .await?;
+        Ok(is_member.is_some())
+    }
 }
 
 #[cfg(test)]
@@ -127,12 +136,12 @@ mod tests {
     #[tokio::test]
     async fn test_create_public_named_chat_should_work() -> anyhow::Result<()> {
         let (_tdb, state) = AppState::new_for_test().await?;
-        let input = CreateChat::new("general", &[1, 2, 3], true);
-        let chat = state.create_chat(input, 1).await.unwrap();
-        assert_eq!(chat.ws_id, 1);
+        let input = CreateChat::new("test-chat", &[2, 3, 4], true);
+        let chat = state.create_chat(input, 2).await.unwrap();
+        assert_eq!(chat.ws_id, 2);
         assert_eq!(chat.members.len(), 3);
         assert_eq!(chat.r#type, ChatType::PublicChannel);
-        assert_eq!(chat.members, vec![1, 2, 3]);
+        assert_eq!(chat.members, vec![2, 3, 4]);
         Ok(())
     }
 
@@ -140,19 +149,32 @@ mod tests {
     async fn chat_get_by_id_should_work() -> anyhow::Result<()> {
         let (_tdb, state) = AppState::new_for_test().await?;
         let chat = state.fetch_chat_by_id(2).await.unwrap().unwrap();
-        assert_eq!(chat.ws_id, 1);
-        assert_eq!(chat.r#type, ChatType::Single);
-        assert_eq!(chat.members, vec![1, 3]);
-        assert_eq!(chat.name, None);
+        assert_eq!(chat.ws_id, 2);
+        assert_eq!(chat.r#type, ChatType::Group);
+        assert_eq!(chat.members, vec![2, 3, 4, 5]);
+        assert_eq!(chat.name, Some("聊天室1".into()));
         Ok(())
     }
 
     #[tokio::test]
     async fn chat_get_all_should_work() -> anyhow::Result<()> {
         let (_tdb, state) = AppState::new_for_test().await?;
-        let chats = state.fetch_chats_all(1).await.unwrap();
+        let chats = state.fetch_chats_all(2).await.unwrap();
         assert_eq!(chats.len(), 4);
 
         Ok(())
+    }
+
+    use crate::AppState;
+
+    #[tokio::test]
+    async fn test_is_chat_member() {
+        let (_tpg, state) = AppState::new_for_test().await.unwrap();
+        // 注意看下这里的chat id
+        let res = state.is_chat_member(2, 2).await.unwrap();
+        assert!(res);
+
+        let res = state.is_chat_member(2, 6).await.unwrap();
+        assert!(!res);
     }
 }
