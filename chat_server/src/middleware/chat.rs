@@ -4,7 +4,8 @@ use axum::{
     response::{IntoResponse, Response},
 };
 
-use crate::{error::AppError, AppState, User};
+use crate::{error::AppError, AppState};
+use chat_core::User;
 
 pub(crate) async fn verify_chat(
     State(state): State<AppState>,
@@ -34,7 +35,7 @@ pub(crate) async fn verify_chat(
 
 #[cfg(test)]
 mod tests {
-    use crate::{middleware::auth::verify_token, User};
+    use crate::middleware::auth::verify_token;
 
     use super::*;
     use anyhow::Result;
@@ -50,7 +51,6 @@ mod tests {
     #[tokio::test]
     async fn test_verify_token_middleware_should_work() -> Result<()> {
         let (_tdb, state) = AppState::new_for_test().await?;
-
         let user = User::new(1, "test.chat@test.com", "test_chat", "123asd");
         let token = state.ek.sign(user.clone())?;
         let app = Router::new()

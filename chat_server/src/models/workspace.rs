@@ -1,6 +1,7 @@
-use crate::{error::AppError, AppState, ChatUser};
+use crate::models::ChatUser;
+use crate::{error::AppError, AppState};
+use chat_core::WorkSpace;
 
-use super::WorkSpace;
 impl AppState {
     pub async fn create_workspace(&self, name: &str, user_id: u64) -> Result<WorkSpace, AppError> {
         let ws =

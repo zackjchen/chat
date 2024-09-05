@@ -3,13 +3,13 @@ pub mod error;
 pub mod handlers;
 pub mod middleware;
 pub mod models;
-pub mod utils;
 use axum::{
     extract::DefaultBodyLimit,
     middleware::from_fn_with_state,
     routing::{get, post},
     Router,
 };
+use chat_core::utils::jwt::{DecodingKey, EncodingKey};
 pub use config::*;
 use error::AppError;
 use handlers::{
@@ -25,7 +25,6 @@ use middleware::set_layer;
 use models::*;
 use std::{fmt::Debug, ops::Deref, sync::Arc};
 use tokio::fs;
-use utils::jwt::{DecodingKey, EncodingKey};
 
 #[derive(Debug, Clone)]
 pub(crate) struct AppState {

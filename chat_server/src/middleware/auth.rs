@@ -48,7 +48,7 @@ pub(crate) async fn verify_token(
 
 #[cfg(test)]
 mod tests {
-    use crate::User;
+    use chat_core::User;
 
     use super::*;
     use anyhow::Result;

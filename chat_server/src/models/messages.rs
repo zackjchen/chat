@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use super::Message;
 use crate::{error::AppError, AppState, ChatFile};
+use chat_core::Message;
 use std::str::FromStr;
 
 #[derive(Debug, Serialize, Deserialize)]

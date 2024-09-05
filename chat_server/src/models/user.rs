@@ -1,13 +1,11 @@
-#![allow(unused)]
-use std::mem;
-
-use crate::{config, AppError, AppState, ChatUser, User, WorkSpace};
+use crate::{AppError, AppState, ChatUser};
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
 };
+use chat_core::User;
 use serde::{Deserialize, Serialize};
-use sqlx::pool;
+use std::mem;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateUser {
@@ -49,6 +47,7 @@ impl CreateUser {
     }
 }
 
+#[allow(unused)]
 impl AppState {
     pub async fn fetch_chat_user_all(&self, ws_id: u64) -> Result<Vec<ChatUser>, AppError> {
         let recs = sqlx::query_as(r#"select id, fullname, email from users where ws_id = $1"#)
@@ -162,14 +161,9 @@ fn verify_password(password: &str, password_hash: &str) -> Result<bool, AppError
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
-
-    use anyhow::Result;
-    use sqlx_db_tester::TestPg;
-
-    use crate::{test_utils::get_test_pool, AppConfig, AppState};
-
     use super::*;
+    use crate::AppState;
+    use anyhow::Result;
     #[tokio::test]
     async fn create_user_should_work() -> Result<()> {
         let (_tdb, state) = AppState::new_for_test().await?;

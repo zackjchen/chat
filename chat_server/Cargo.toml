@@ -10,7 +10,7 @@ anyhow = {workspace = true}
 argon2 = { version = "0.5.3", features = ["std"] }
 axum =  {workspace = true}
 axum-extra = { version = "0.9.3", features = ["typed-header"] }
-chrono = { version = "0.4.38", features = ["serde"] }
+chrono = { workspace = true }
 hex = "0.4.3"
 jwt-simple = "0.12.9"
 mime_guess = "2.0.5"
@@ -25,6 +25,7 @@ tower-http = { version = "0.5.2", features = ["compression-full", "fs","trace"] 
 tracing =  {workspace = true}
 tracing-subscriber =  {workspace = true}
 uuid = { version = "1.10.0", features = ["v7", "serde"] }
+chat-core = { path = "../chat_core" }
 
 [dev-dependencies]
 sqlx-db-tester = "0.4.2"
