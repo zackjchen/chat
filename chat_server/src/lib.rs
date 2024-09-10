@@ -9,7 +9,11 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use chat_core::utils::jwt::{DecodingKey, EncodingKey};
+use chat_core::{
+    middleware::{auth::verify_token, set_layer, TokenVerify},
+    utils::jwt::{DecodingKey, EncodingKey},
+    User,
+};
 pub use config::*;
 use error::AppError;
 use handlers::{
@@ -19,15 +23,13 @@ use handlers::{
     messages::{download_file_handler, list_message_handler, send_message_handler, upload_handler},
     workspace::list_chat_users_handler,
 };
-use middleware::auth::verify_token;
 use middleware::chat::verify_chat;
-use middleware::set_layer;
 use models::*;
 use std::{fmt::Debug, ops::Deref, sync::Arc};
 use tokio::fs;
 
 #[derive(Debug, Clone)]
-pub(crate) struct AppState {
+pub struct AppState {
     inner: Arc<AppStateInner>,
 }
 
@@ -52,6 +54,14 @@ impl Deref for AppState {
 
     fn deref(&self) -> &Self::Target {
         &self.inner
+    }
+}
+impl TokenVerify for AppState {
+    type Error = AppError;
+
+    fn verify(&self, token: &str) -> Result<User, Self::Error> {
+        let user = self.dk.verify(token)?;
+        Ok(user)
     }
 }
 
@@ -103,7 +113,7 @@ pub async fn get_router(config: AppConfig) -> Result<Router, AppError> {
             post(upload_handler).layer(DefaultBodyLimit::max(50 * 1024 * 1024)),
         )
         .route("/files/:ws_id/*path", get(download_file_handler))
-        .layer(from_fn_with_state(state.clone(), verify_token))
+        .layer(from_fn_with_state(state.clone(), verify_token::<AppState>))
         // 这里是因为登陆和注册还没有token，所以不需要验证token
         .route("/signin", post(signin_handler))
         .route("/signup", post(signup_handler));

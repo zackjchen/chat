@@ -14,7 +14,7 @@ use crate::middleware::REQUEST_ID_HEADER;
 use super::SERVER_TIME_HEADER;
 
 #[derive(Clone)]
-pub(crate) struct ServerTimeLayer;
+pub struct ServerTimeLayer;
 
 impl<S> Layer<S> for ServerTimeLayer {
     type Service = ServerTimeMiddleware<S>;

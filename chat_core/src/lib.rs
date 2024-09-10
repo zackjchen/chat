@@ -1,5 +1,5 @@
+pub mod middleware;
 pub mod utils;
-
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;

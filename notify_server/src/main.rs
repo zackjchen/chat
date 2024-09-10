@@ -11,11 +11,11 @@ async fn main() -> Result<()> {
     tracing_subscriber::registry().with(layer).init();
 
     let addr = "0.0.0.0:6687";
-    setup_pg_listener().await?;
+
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     info!("Starting server at {}", addr);
-
-    let app = get_router();
+    let (app, state) = get_router();
+    setup_pg_listener(state).await?;
 
     axum::serve(listener, app.into_make_service()).await?;
     Ok(())

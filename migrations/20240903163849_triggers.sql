@@ -28,10 +28,13 @@ EXECUTE FUNCTION notify_chat_updated();
 CREATE OR REPLACE FUNCTION notify_message_added()
 RETURNS TRIGGER
 AS $$
+DECLARE
+    users BIGINT[];
 BEGIN
     IF TG_OP = 'INSERT' THEN
         RAISE NOTICE 'message_added: %', NEW;
-        PERFORM pg_notify('message_added', row_to_json(NEW)::text);
+        SELECT members INTO users FROM chats where id=NEW.chat_id;
+        PERFORM pg_notify('message_added', json_build_object('message', NEW, 'members', users)::text);
     END IF;
     RETURN NEW;
 END;

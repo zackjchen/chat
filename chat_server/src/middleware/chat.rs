@@ -7,11 +7,7 @@ use axum::{
 use crate::{error::AppError, AppState};
 use chat_core::User;
 
-pub(crate) async fn verify_chat(
-    State(state): State<AppState>,
-    req: Request,
-    next: Next,
-) -> Response {
+pub async fn verify_chat(State(state): State<AppState>, req: Request, next: Next) -> Response {
     let (mut parts, body) = req.into_parts();
     let Path(chat_id) = Path::<u64>::from_request_parts(&mut parts, &state)
         .await
@@ -35,7 +31,7 @@ pub(crate) async fn verify_chat(
 
 #[cfg(test)]
 mod tests {
-    use crate::middleware::auth::verify_token;
+    use chat_core::middleware::auth::verify_token;
 
     use super::*;
     use anyhow::Result;
@@ -44,7 +40,6 @@ mod tests {
         routing::get, Router,
     };
     use tower::ServiceExt;
-
     async fn handler(_req: Request) -> impl IntoResponse {
         (StatusCode::OK, "Ok")
     }
@@ -57,7 +52,7 @@ mod tests {
             .route("/test/:id", get(handler))
             .route("/test/:id/messages", get(handler))
             .layer(from_fn_with_state(state.clone(), verify_chat))
-            .layer(from_fn_with_state(state.clone(), verify_token))
+            .layer(from_fn_with_state(state.clone(), verify_token::<AppState>))
             .with_state(state.clone());
 
         // new user should not be a member of chat
