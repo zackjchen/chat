@@ -81,7 +81,7 @@ mod tests {
         let input = CreateUser::new("test1", "email", "fullname", "password");
         let user = state.create_user(&input).await.unwrap();
         assert_eq!(user.ws_id, 2);
-        assert_eq!(user.id, 6);
+        assert_eq!(user.id, 7);
 
         Ok(())
     }
@@ -125,7 +125,7 @@ mod tests {
         // assert_eq!(res[0].id, user1.id);
         // assert_eq!(res[1].id, user2.id);
         let users = state.fetch_workspace_all_users(2).await?;
-        assert_eq!(users.len(), 4);
+        assert_eq!(users.len(), 5);
         Ok(())
     }
 }

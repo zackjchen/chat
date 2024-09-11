@@ -52,12 +52,7 @@ mod tests {
     #[tokio::test]
     async fn test_signup_handler() -> Result<()> {
         let (_tgp, state) = AppState::new_for_test().await?;
-        let input = CreateUser::new(
-            "default",
-            "zack.j.chen@hkjc.org.hk",
-            "zackjchen",
-            "hunter42",
-        );
+        let input = CreateUser::new("default", "aaa@hkjc.org.hk", "zackjchen", "hunter42");
         let res = signup_handler(State(state), Json(input))
             .await?
             .into_response();
@@ -140,16 +135,11 @@ mod tests {
     #[tokio::test]
     async fn create_duplicate_user_should_failed() -> Result<()> {
         let (_tdb, state) = AppState::new_for_test().await?;
-        let input = CreateUser::new(
-            "default",
-            "zack.j.chen@hkjc.org.hk",
-            "zackjchen",
-            "hunter43",
-        );
+        let input = CreateUser::new("default", "abc@hkjc.org.hk", "zackjchen", "hunter43");
         state.create_user(&input).await?;
         let res2 = state.create_user(&input).await;
         match res2 {
-            Err(AppError::EmailAlreadyExists(e)) => assert_eq!(e, "zack.j.chen@hkjc.org.hk"),
+            Err(AppError::EmailAlreadyExists(e)) => assert_eq!(e, "abc@hkjc.org.hk"),
             _ => panic!("Expecting EmailAlreadyExists error"),
         }
 

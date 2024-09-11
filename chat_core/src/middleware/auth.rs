@@ -1,6 +1,6 @@
 use super::TokenVerify;
 use axum::{
-    extract::{FromRequestParts, Request, State},
+    extract::{FromRequestParts, Query, Request, State},
     http::StatusCode,
     middleware::Next,
     response::{IntoResponse, Response},
@@ -9,38 +9,51 @@ use axum_extra::{
     headers::{authorization::Bearer, Authorization},
     TypedHeader,
 };
+use serde::Deserialize;
 use tracing::warn;
+#[derive(Debug, Deserialize)]
+struct Params {
+    access_token: String,
+}
 
 pub async fn verify_token<T>(State(state): State<T>, req: Request, next: Next) -> Response
 where
     T: TokenVerify + Clone + Send + Sync + 'static,
 {
     let (mut parts, body) = req.into_parts();
-    let auth_header =
-        TypedHeader::<Authorization<Bearer>>::from_request_parts(&mut parts, &state).await;
-    let req = match auth_header {
-        Ok(TypedHeader(Authorization(bearer))) => {
-            let token = bearer.token();
-            // Use the token value here
-            match state.verify(token) {
-                Ok(user) => {
-                    let mut req = Request::from_parts(parts, body);
-                    req.extensions_mut().insert(user);
-                    req
-                }
-                Err(e) => {
-                    let msg = format!("Verify token failed: {:?}", e);
+    let token =
+        match TypedHeader::<Authorization<Bearer>>::from_request_parts(&mut parts, &state).await {
+            Ok(TypedHeader(Authorization(bearer))) => bearer.token().to_string(),
+            Err(e) => {
+                if e.is_missing() {
+                    match Query::<Params>::from_request_parts(&mut parts, &state).await {
+                        Ok(params) => params.access_token.clone(),
+                        Err(e) => {
+                            let msg = format!("failed to get params access_token: {}", e);
+                            warn!(msg);
+                            return (StatusCode::UNAUTHORIZED, msg).into_response();
+                        }
+                    }
+                } else {
+                    let msg = format!("failed to get authorization header: {}", e);
                     warn!(msg);
-                    return (StatusCode::FORBIDDEN, msg).into_response();
+                    return (StatusCode::UNAUTHORIZED, msg).into_response();
                 }
             }
+        };
+    let req = match state.verify(&token) {
+        Ok(user) => {
+            let mut req = Request::from_parts(parts, body);
+            req.extensions_mut().insert(user);
+            req
         }
         Err(e) => {
-            let msg = format!("failed to get authorization header: {}", e);
+            let msg = format!("Verify token failed: {:?}", e);
             warn!(msg);
-            return (StatusCode::UNAUTHORIZED, msg).into_response();
+            return (StatusCode::FORBIDDEN, msg).into_response();
         }
     };
+
     next.run(req).await
 }
 
@@ -99,6 +112,13 @@ mod tests {
             .header("Authorization", format!("Bearer {}", token))
             .body(Body::empty())?;
 
+        let res = app.clone().oneshot(req).await?;
+        assert_eq!(res.status(), StatusCode::OK);
+
+        // good token with query
+        let req = Request::builder()
+            .uri(format!("/test?access_token={}", token))
+            .body(Body::empty())?;
         let res = app.clone().oneshot(req).await?;
         assert_eq!(res.status(), StatusCode::OK);
 

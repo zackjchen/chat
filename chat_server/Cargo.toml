@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+default = []
+test-util = ["http-body-util", "sqlx-db-tester"]
 
 [dependencies]
 anyhow = {workspace = true}
@@ -27,6 +30,8 @@ chat-core = { path = "../chat_core" }
 uuid = {workspace = true}
 jwt-simple = {workspace = true}
 
+sqlx-db-tester = {version = "0.4.2", optional = true}
+http-body-util = {version = "0.1.2",optional = true}
+
 [dev-dependencies]
-sqlx-db-tester = "0.4.2"
-http-body-util = "0.1.2"
+chat-server = { workspace = true , features = ["test-util"]}

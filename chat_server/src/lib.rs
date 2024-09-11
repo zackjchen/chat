@@ -82,9 +82,7 @@ impl AppState {
     }
 }
 
-pub async fn get_router(config: AppConfig) -> Result<Router, AppError> {
-    let state = AppState::try_new(config).await?;
-
+pub async fn get_router(state: AppState) -> Result<Router, AppError> {
     let chat_router = Router::new()
         .route(
             "/:id",
@@ -126,13 +124,13 @@ pub async fn get_router(config: AppConfig) -> Result<Router, AppError> {
     Ok(set_layer(app))
 }
 
-#[cfg(test)]
-mod test_utils {
+#[cfg(feature = "test-util")]
+pub mod test_utils {
     use super::*;
     use sqlx::{Executor, PgPool};
     use sqlx_db_tester::TestPg;
     impl AppState {
-        #[cfg(test)]
+        // #[cfg(test)]
         pub async fn new_for_test() -> Result<(TestPg, Self), AppError> {
             let config = AppConfig::load()?;
             let ek = EncodingKey::load(&config.auth.sk).expect("load encoding key failed");
@@ -141,7 +139,7 @@ mod test_utils {
             let server_url = &config.server.db_url[..index];
             println!("server_url: {:?}", server_url);
             // server_url postgre://zackjchen:postgres@localhost:5432
-            let (tdb, pool) = test_utils::get_test_pool(Some(server_url)).await;
+            let (tdb, pool) = get_test_pool(Some(server_url)).await;
             let state = Self {
                 inner: Arc::new(AppStateInner {
                     config,
@@ -153,8 +151,7 @@ mod test_utils {
             Ok((tdb, state))
         }
     }
-
-    pub async fn get_test_pool(url: Option<&str>) -> (TestPg, PgPool) {
+    async fn get_test_pool(url: Option<&str>) -> (TestPg, PgPool) {
         let url = if let Some(url) = url {
             url
         } else {

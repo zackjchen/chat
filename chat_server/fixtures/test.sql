@@ -7,12 +7,13 @@ VALUES
 
 
 
-INSERT INTO users(ws_id, email, fullname,password_hash)
+INSERT INTO users(ws_id, email, fullname, password_hash)
 VALUES
  (2, 'zack@email.com', 'Zack', '$argon2id$v=19$m=19456,t=2,p=1$gx8v9D5+5jlThZcuBfmc9w$sGMUKp8uiVQnjdbjaCTbjJDn82C4MpMwo3BboAb7huk'),
  (2, 'bency@email.com', 'lijiajia', '$argon2id$v=19$m=19456,t=2,p=1$gx8v9D5+5jlThZcuBfmc9w$sGMUKp8uiVQnjdbjaCTbjJDn82C4MpMwo3BboAb7huk'),
  (2, 'gaoyin@email.com', 'gaoyin', '$argon2id$v=19$m=19456,t=2,p=1$gx8v9D5+5jlThZcuBfmc9w$sGMUKp8uiVQnjdbjaCTbjJDn82C4MpMwo3BboAb7huk'),
- (2, 'zixin@email.com', 'zixin', '$argon2id$v=19$m=19456,t=2,p=1$gx8v9D5+5jlThZcuBfmc9w$sGMUKp8uiVQnjdbjaCTbjJDn82C4MpMwo3BboAb7huk');
+ (2, 'zixin@email.com', 'zixin', '$argon2id$v=19$m=19456,t=2,p=1$gx8v9D5+5jlThZcuBfmc9w$sGMUKp8uiVQnjdbjaCTbjJDn82C4MpMwo3BboAb7huk'),
+ (2, 'zack.j.chen@hkjc.org.hk','Zack Chen', '$argon2id$v=19$m=19456,t=2,p=1$B8qQNYm9nkaXnQqfrJ4lsA$2ThHNSA1fCSOy65//5CurKTXmSoyxEEZD9wdZ1ohimw');
 
 
 
