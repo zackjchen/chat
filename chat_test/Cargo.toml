@@ -1,0 +1,19 @@
+[package]
+name = "chat_test"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dev-dependencies]
+chat-server = { workspace = true ,features = ["test-util"]}
+notify-server = { workspace = true }
+chat-core = { workspace = true }
+reqwest = { version = "0.12.7", default-features = false, features = ["rustls-tls", "json"] }
+axum = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+serde = {workspace = true}
+tracing = {workspace = true}
+tracing-subscriber = {workspace = true}
+[dependencies]
