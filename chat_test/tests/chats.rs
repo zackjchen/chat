@@ -1,6 +1,12 @@
+use anyhow::Result;
+use chat_core::{Chat, Message};
+use reqwest::{
+    multipart::{Form, Part},
+    StatusCode,
+};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::net::SocketAddr;
-
 const WILD_ADDRESS: &str = "0.0.0.0:0";
 
 struct ChatServer {
@@ -51,12 +57,70 @@ impl ChatServer {
         self.token = token.token;
         Ok(self.token.clone())
     }
+
+    async fn create_chat(&self) -> Result<Chat> {
+        let url = format!("http://{}/api/chat", self.addr);
+        let resp = self
+            .client
+            .post(&url)
+            .header("Content-Type", "application/json")
+            .header("Authorization", format!("Bearer {}", self.token))
+            .body(r#"{"name": "","members": [2,3,4,5,6],"public": false}"#)
+            .send()
+            .await?;
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        let chat: Chat = resp.json().await?;
+        Ok(chat)
+    }
+
+    async fn create_message(&self, chat_id: u64) -> Result<Message> {
+        let data = include_str!("../Cargo.toml");
+        let files = Part::text(data)
+            .file_name("Cargo.toml")
+            .mime_str("text/plain")?;
+        let form = Form::new().part("file", files);
+        let rep = self
+            .client
+            .post(&format!("http://{}/api/upload", self.addr))
+            .header("Authorization", format!("Bearer {}", self.token))
+            .multipart(form)
+            .send()
+            .await?;
+        assert_eq!(rep.status(), StatusCode::OK);
+        let file_urls: Vec<String> = rep.json().await?;
+
+        let body = json!(
+            {
+                "content": "hello",
+                "files": file_urls
+            }
+        )
+        .to_string();
+        let res = self
+            .client
+            .post(&format!(
+                "http://{}/api/chat/{}/messages",
+                self.addr, chat_id
+            ))
+            .header("Content-Type", "application/json")
+            .header("Authorization", format!("Bearer {}", self.token))
+            .body(body)
+            .send()
+            .await?;
+        assert_eq!(res.status(), StatusCode::OK);
+        let message: Message = res.json().await?;
+        assert_eq!(message.content, "hello");
+        assert_eq!(message.files, file_urls);
+        Ok(message)
+    }
 }
 #[tokio::test]
 async fn chat_server_should_work() -> anyhow::Result<()> {
     // _tdb is 需要整个生命周期都存在，所以不能用放到new里面，不然会被drop
     let (_tdb, state) = chat_server::AppState::new_for_test().await?;
-    let _server = ChatServer::new(state).await?;
+    let server = ChatServer::new(state).await?;
+    let chat = server.create_chat().await?;
+    let _message = server.create_message(chat.id as u64).await?;
     println!("server:");
     Ok(())
 }

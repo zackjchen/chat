@@ -9,11 +9,14 @@ edition = "2021"
 chat-server = { workspace = true ,features = ["test-util"]}
 notify-server = { workspace = true }
 chat-core = { workspace = true }
-reqwest = { version = "0.12.7", default-features = false, features = ["rustls-tls", "json"] }
+reqwest = { version = "0.12.7", default-features = false, features = ["rustls-tls", "json", "multipart","stream"] }
 axum = { workspace = true }
 tokio = { workspace = true }
 anyhow = { workspace = true }
 serde = {workspace = true}
 tracing = {workspace = true}
 tracing-subscriber = {workspace = true}
+
 [dependencies]
+futures = "0.3.30"
+serde_json = "1.0.128"
