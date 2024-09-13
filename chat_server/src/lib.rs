@@ -137,7 +137,6 @@ pub mod test_utils {
             let dk = DecodingKey::load(&config.auth.pk).expect("load decoding key failed");
             let index = config.server.db_url.rfind('/').expect("invalid db_url");
             let server_url = &config.server.db_url[..index];
-            println!("server_url: {:?}", server_url);
             // server_url postgre://zackjchen:postgres@localhost:5432
             let (tdb, pool) = get_test_pool(Some(server_url)).await;
             let state = Self {

@@ -36,20 +36,21 @@ struct MessageCreated {
 }
 
 pub async fn setup_pg_listener(state: AppState) -> anyhow::Result<()> {
+    println!("Connecting to database: {}", state.config.server.db_url);
     let mut listener = PgListener::connect(&state.config.server.db_url).await?;
     listener.listen("chat_updated").await?;
     listener.listen("message_added").await?;
 
     let mut stream = listener.into_stream();
-
     tokio::spawn(async move {
         while let Some(Ok(notify)) = stream.next().await {
             info!("Received notification: {:?}", notify);
-            let notification = Notification::load(notify.channel(), notify.payload())?;
+            let notification = Notification::load(notify.channel(), notify.payload()).unwrap();
             let users = &state.users;
             for user_id in notification.user_ids {
                 if let Some(tx) = users.get(&user_id) {
                     info!("Sending notification to user {}", user_id);
+
                     if let Err(e) = tx.send(notification.event.clone()) {
                         warn!("Failed to send notification to user {}: {:?}", user_id, e);
                     }
@@ -68,7 +69,7 @@ impl Notification {
                 let payload = serde_json::from_str::<ChatUpdated>(payload)?;
                 info!("Chat updated: {:?}", payload);
                 let user_ids = get_affected_user_ids(payload.old.as_ref(), payload.new.as_ref());
-                let event = match payload.op.as_str() {
+                let event = match payload.op.to_lowercase().as_str() {
                     "insert" => AppEvent::NewChat(payload.new.expect("new should exist")),
                     "update" => AppEvent::AddToChat(payload.new.expect("new should exist")),
                     "delete" => AppEvent::RemoveFromChat(payload.old.expect("old should exist")),

@@ -13,7 +13,6 @@ pub async fn verify_chat(State(state): State<AppState>, req: Request, next: Next
         .await
         .unwrap();
     let user = parts.extensions.get::<User>().unwrap();
-    println!("User: {:?}", user);
     if !state
         .is_chat_member(chat_id as i64, user.id as u64)
         .await

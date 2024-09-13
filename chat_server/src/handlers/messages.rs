@@ -41,7 +41,6 @@ pub(crate) async fn upload_handler(
     let ws_id = user.ws_id;
     let base_dir = &state.config.server.base_dir;
     let mut files = vec![];
-    println!("{:?}", mutpart);
     while let Some(field) = mutpart.next_field().await.unwrap() {
         let filename = field.file_name().map(|s| s.to_string());
         let (Some(filename), Ok(data)) = (&filename, field.bytes().await) else {

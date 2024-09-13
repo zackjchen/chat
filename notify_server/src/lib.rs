@@ -16,7 +16,7 @@ use chat_core::{
     utils::jwt::DecodingKey,
     User,
 };
-use config::AppConfig;
+pub use config::AppConfig;
 use dashmap::DashMap;
 use error::AppError;
 use sse::sse_handler;
@@ -55,15 +55,16 @@ impl AppState {
     }
 }
 
-pub fn get_router() -> (Router, AppState) {
-    let config = AppConfig::load().expect("failed to load config");
+pub async fn get_router(config: AppConfig) -> anyhow::Result<Router> {
     let state = AppState::new(config).expect("failed to create app state");
+    setup_pg_listener(state.clone()).await?;
+
     let router = Router::new()
         .route("/events", get(sse_handler))
         .layer(from_fn_with_state(state.clone(), verify_token::<AppState>))
         .route("/", get(index_handler))
         .with_state(state.clone());
-    (router, state)
+    Ok(router)
 }
 
 async fn index_handler() -> impl IntoResponse {

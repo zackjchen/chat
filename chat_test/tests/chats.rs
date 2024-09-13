@@ -1,12 +1,16 @@
 use anyhow::Result;
 use chat_core::{Chat, Message};
+use futures::StreamExt;
 use reqwest::{
     multipart::{Form, Part},
     StatusCode,
 };
+use reqwest_eventsource::Event;
+use reqwest_eventsource::EventSource;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::net::SocketAddr;
+use std::{net::SocketAddr, time::Duration};
+use tokio::time::sleep;
 const WILD_ADDRESS: &str = "0.0.0.0:0";
 
 struct ChatServer {
@@ -14,6 +18,7 @@ struct ChatServer {
     token: String,
     client: reqwest::Client,
 }
+struct NotifyServer;
 
 #[derive(Debug, Deserialize, Serialize)]
 struct AuthToken {
@@ -65,7 +70,7 @@ impl ChatServer {
             .post(&url)
             .header("Content-Type", "application/json")
             .header("Authorization", format!("Bearer {}", self.token))
-            .body(r#"{"name": "","members": [2,3,4,5,6],"public": false}"#)
+            .body(r#"{"name": "zack group","members": [2,3,4,5,6],"public": false}"#)
             .send()
             .await?;
         assert_eq!(resp.status(), StatusCode::CREATED);
@@ -114,13 +119,54 @@ impl ChatServer {
         Ok(message)
     }
 }
+
+impl NotifyServer {
+    async fn new(db_url: &str, token: &str) -> anyhow::Result<Self> {
+        let listener = tokio::net::TcpListener::bind(WILD_ADDRESS).await?;
+        let addr = listener.local_addr()?;
+        let mut config = notify_server::AppConfig::load().expect("failed to load config");
+        config.server.db_url = db_url.to_string();
+        println!("config db_url: {:?}", config.server.db_url);
+        let app = notify_server::get_router(config).await?;
+        tokio::spawn(async move {
+            axum::serve(listener, app.into_make_service())
+                .await
+                .unwrap();
+        });
+        let mut es = EventSource::get(format!("http://{}/events?access_token={}", addr, token));
+
+        tokio::spawn(async move {
+            while let Some(event) = es.next().await {
+                println!("event: {:?}", event);
+                match event {
+                    Ok(Event::Open) => {
+                        println!("Connection Open");
+                    }
+                    Ok(Event::Message(msg)) => {
+                        println!("event: {:?}", msg);
+                    }
+                    Err(e) => {
+                        println!("error: {:?}", e);
+                        es.close();
+                    }
+                }
+            }
+        });
+        Ok(Self)
+    }
+}
+
 #[tokio::test]
 async fn chat_server_should_work() -> anyhow::Result<()> {
     // _tdb is 需要整个生命周期都存在，所以不能用放到new里面，不然会被drop
-    let (_tdb, state) = chat_server::AppState::new_for_test().await?;
+    let (tdb, state) = chat_server::AppState::new_for_test().await?;
     let server = ChatServer::new(state).await?;
+    println!("server: {:?}", tdb.url());
+    NotifyServer::new(&tdb.url(), &server.token).await?;
     let chat = server.create_chat().await?;
+    // println!("chat: {:?}", chat);
     let _message = server.create_message(chat.id as u64).await?;
-    println!("server:");
+    sleep(Duration::from_secs(1)).await;
+
     Ok(())
 }
