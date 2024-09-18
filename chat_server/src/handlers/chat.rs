@@ -8,6 +8,16 @@ use axum::{
 use chat_core::User;
 use tracing::info;
 
+/// list all chat
+#[utoipa::path(
+    get,
+    path = "/api/chat",
+    responses(
+        (status=200, description="List of chats", body=[Chat]),
+    ),
+    security(("token" = [])),
+    tag = "chat"
+)]
 pub(crate) async fn list_chat_handler(
     Extension(user): Extension<User>,
     State(state): State<AppState>,
@@ -18,6 +28,17 @@ pub(crate) async fn list_chat_handler(
     Ok((StatusCode::OK, Json(chats)))
 }
 
+/// create a new chat
+#[utoipa::path(
+    post,
+    path = "/api/chat",
+    request_body = CreateChat,
+    responses(
+        (status=200, description="List of chats", body=[Chat]),
+    ),
+    security(("token" = [])),
+    tag = "chat"
+)]
 pub(crate) async fn create_chat_handler(
     Extension(user): Extension<User>,
     State(state): State<AppState>,
@@ -27,14 +48,31 @@ pub(crate) async fn create_chat_handler(
     Ok((StatusCode::CREATED, Json(chat)))
 }
 
+// TODO: update chat
 pub(crate) async fn update_chat_handler() -> impl IntoResponse {
-    todo!()
+    ""
 }
 
+// TODO: delete chat
 pub(crate) async fn delete_chat_handler() -> impl IntoResponse {
-    todo!()
+    ""
 }
 
+/// get a chat
+#[utoipa::path(
+    get,
+    path = "/api/chat/{id}",
+    params(
+        ("id"=i64, Path, description="chat id"),
+        ("access_token"=inline(Option<String>),Query ,
+            description="access_token, if passed, will be used to authenticate the request, alternatively, you can use the Authorization header")
+    ),
+    responses(
+        (status=200, description="chat details", body=Chat),
+    ),
+    security(("token" = [])),
+    tag = "chat"
+)]
 pub(crate) async fn get_chat_handler(
     State(state): State<AppState>,
     Path(id): Path<i64>,

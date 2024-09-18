@@ -142,9 +142,24 @@ impl NotifyServer {
                     Ok(Event::Open) => {
                         println!("Connection Open");
                     }
-                    Ok(Event::Message(msg)) => {
-                        println!("event: {:?}", msg);
-                    }
+                    Ok(Event::Message(msg)) => match msg.event.as_str() {
+                        "NewChat" => {
+                            let message: Chat = serde_json::from_str(&msg.data).unwrap();
+                            assert_eq!(message.name.unwrap(), "zack group");
+                            assert_eq!(message.members, vec![2, 3, 4, 5, 6]);
+                        }
+                        "NewMessage" => {
+                            let message: Message = serde_json::from_str(&msg.data).unwrap();
+                            assert_eq!(message.content, "hello");
+                            assert_eq!(message.files.len(), 1);
+                            assert_eq!(message.chat_id, 6);
+                            assert_eq!(message.sender_id, 6);
+                        }
+
+                        _ => {
+                            println!("unknown event: {:?}", msg.event);
+                        }
+                    },
                     Err(e) => {
                         println!("error: {:?}", e);
                         es.close();

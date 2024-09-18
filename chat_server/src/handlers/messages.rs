@@ -13,6 +13,19 @@ use chat_core::User;
 use tokio::fs::{self};
 use tracing::{info, warn};
 
+/// create a new message and send to chat
+#[utoipa::path(
+    post,
+    path = "/api/chat/{id}/messages",
+    params(
+        ("id"=u64,Path, description="Chat Id"),
+    ),
+    request_body=CreateMessage,
+    responses((status = 200, description = "create message suucess", body=Message)),
+    security(("token" = [])),
+    tag = "chat"
+
+)]
 pub(crate) async fn send_message_handler(
     State(state): State<AppState>,
     Path(chat_id): Path<u64>,
@@ -25,11 +38,24 @@ pub(crate) async fn send_message_handler(
     Ok(Json(msg))
 }
 
+/// list all messages of chat
+#[utoipa::path(
+    get,
+    path = "/api/chat/{id}/messages",
+    params(("id"=u64,Path, description="Chat Id"), ListMessages),
+    responses((status = 200, description = "List messages suucess", body=Vec<Message>)),
+    security(("token" = [])),
+    tag = "chat"
+
+)]
 pub(crate) async fn list_message_handler(
     State(state): State<AppState>,
     Query(input): Query<ListMessages>,
+    Path(chat_id): Path<u64>,
 ) -> Result<impl IntoResponse, AppError> {
-    let msgs = state.list_messages(input).await?;
+    info!("path: {}, input: {:?}", chat_id, input);
+    let msgs = state.list_messages(chat_id, input).await?;
+    info!("List messages: {:?}", msgs);
     Ok(Json(msgs))
 }
 

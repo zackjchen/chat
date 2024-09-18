@@ -6,8 +6,9 @@ use argon2::{
 use chat_core::User;
 use serde::{Deserialize, Serialize};
 use std::mem;
+use utoipa::{IntoParams, ToSchema};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema, IntoParams)]
 pub struct CreateUser {
     pub email: String,
     pub fullname: String,
@@ -15,7 +16,7 @@ pub struct CreateUser {
     pub workspace: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema, IntoParams)]
 pub struct SigninUser {
     pub email: String,
     pub password: String,

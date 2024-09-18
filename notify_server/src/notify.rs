@@ -9,7 +9,7 @@ use tokio_stream::StreamExt;
 use tracing::{info, warn};
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "type")]
+#[serde(tag = "event")] // 序列化enum时，根据tag字段的值来标识序列化的variant
 pub enum AppEvent {
     NewChat(Chat),
     AddToChat(Chat),

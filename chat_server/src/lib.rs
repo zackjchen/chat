@@ -3,6 +3,7 @@ pub mod error;
 pub mod handlers;
 pub mod middleware;
 pub mod models;
+mod openapi;
 use axum::{
     extract::DefaultBodyLimit,
     middleware::from_fn_with_state,
@@ -21,10 +22,11 @@ use handlers::{
     chat::*,
     index_handler,
     messages::{download_file_handler, list_message_handler, send_message_handler, upload_handler},
-    workspace::list_chat_users_handler,
+    workspace::list_workspace_users_handler,
 };
 use middleware::chat::verify_chat;
 use models::*;
+use openapi::OpenApiRouter;
 use std::{fmt::Debug, ops::Deref, sync::Arc};
 use tokio::fs;
 
@@ -104,7 +106,7 @@ pub async fn get_router(state: AppState) -> Result<Router, AppError> {
         );
 
     let api = Router::new()
-        .route("/users", get(list_chat_users_handler))
+        .route("/users", get(list_workspace_users_handler))
         .nest("/chat", chat_router)
         .route(
             "/upload",
@@ -117,6 +119,7 @@ pub async fn get_router(state: AppState) -> Result<Router, AppError> {
         .route("/signup", post(signup_handler));
 
     let app = Router::new()
+        .openapi()
         .route("/", get(index_handler))
         .nest("/api", api)
         .with_state(state);

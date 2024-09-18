@@ -1,18 +1,22 @@
 use serde::{Deserialize, Serialize};
+use utoipa::{IntoParams, ToSchema};
 
 use crate::{error::AppError, AppState, ChatFile};
 use chat_core::Message;
 use std::str::FromStr;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct CreateMessage {
     pub content: String,
+    #[serde(default)]
     pub files: Vec<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, IntoParams, ToSchema)]
+#[into_params(parameter_in = Query)]
 pub struct ListMessages {
-    pub chat_id: i64,
+    // pub chat_id: i64,
+    #[param(nullable)]
     pub last_id: Option<i64>,
     pub limit: u64,
 }
@@ -55,7 +59,11 @@ impl AppState {
         Ok(message)
     }
 
-    pub async fn list_messages(&self, opts: ListMessages) -> Result<Vec<Message>, AppError> {
+    pub async fn list_messages(
+        &self,
+        chat_id: u64,
+        opts: ListMessages,
+    ) -> Result<Vec<Message>, AppError> {
         let last_id = opts.last_id.unwrap_or(i64::MAX);
         let messages = sqlx::query_as(
             r#"
@@ -67,7 +75,7 @@ impl AppState {
             LIMIT $3
             "#,
         )
-        .bind(opts.chat_id)
+        .bind(chat_id as i64)
         .bind(last_id)
         .bind(opts.limit as i64)
         .fetch_all(&self.pool)
@@ -108,29 +116,26 @@ mod tests {
     async fn test_list_messages_should_work() -> anyhow::Result<()> {
         let (_tdb, state) = AppState::new_for_test().await?;
         let opts = ListMessages {
-            chat_id: 2,
             last_id: None,
             limit: 10,
         };
-        let messages = state.list_messages(opts).await?;
+        let messages = state.list_messages(2, opts).await?;
         assert_eq!(messages.len(), 10);
 
         let id = messages.last().unwrap().id;
         let opts = ListMessages {
-            chat_id: 2,
             last_id: Some(id),
             limit: 10,
         };
-        let messages = state.list_messages(opts).await?;
+        let messages = state.list_messages(2, opts).await?;
         assert_eq!(messages.len(), 10);
 
         let id = messages.last().unwrap().id;
         let opts = ListMessages {
-            chat_id: 2,
             last_id: Some(id),
             limit: 10,
         };
-        let messages = state.list_messages(opts).await?;
+        let messages = state.list_messages(2, opts).await?;
         assert_eq!(messages.len(), 4);
         assert_eq!(messages.last().unwrap().id, 1);
         assert_eq!(messages.last().unwrap().content, "hello1".to_string());

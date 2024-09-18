@@ -5,12 +5,28 @@ use crate::{
 };
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct AuthOutput {
     pub token: String,
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/signup",
+    request_body = CreateUser,
+    responses(
+        (status=200, description="User created successfully", body=AuthOutput),
+    ),
+    tag = "chat"
+
+)]
+/// Create a new user in the chat system with email, password workspace and full name.
+///
+/// - If the email already exists, it will return 409.
+/// - Otherwise, it will return 201 with a token.
+/// - If the workspace doesn't exist, it will create one.
 pub(crate) async fn signup_handler(
     State(state): State<AppState>,
     Json(input): Json<CreateUser>,
@@ -24,6 +40,17 @@ pub(crate) async fn signup_handler(
     Ok((StatusCode::CREATED, body))
 }
 
+/// Sign in a user with email and password.
+#[utoipa::path(
+    post,
+    path = "/api/signin",
+    request_body = SigninUser,
+    responses(
+        (status=200, description="User Signin", body=Chat),
+    ),
+    tag = "chat"
+
+)]
 pub(crate) async fn signin_handler(
     State(state): State<AppState>,
     Json(input): Json<SigninUser>,
