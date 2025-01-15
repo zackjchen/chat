@@ -12,7 +12,6 @@ use chat_core::User;
     security(("token" = [])),
     tag = "chat"
 )]
-
 pub(crate) async fn list_workspace_users_handler(
     Extension(user): Extension<User>,
     State(state): State<AppState>,

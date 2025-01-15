@@ -48,6 +48,7 @@ mod tests {
         let user_init = User {
             id: 1,
             ws_id: 0,
+            ws_name: "".to_string(),
             fullname: "test".to_string(),
             email: "zackjchen@hkjc.org.hk".into(),
             password_hash: None,

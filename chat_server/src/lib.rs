@@ -4,6 +4,7 @@ pub mod handlers;
 pub mod middleware;
 pub mod models;
 mod openapi;
+use axum::http::Method;
 use axum::{
     extract::DefaultBodyLimit,
     middleware::from_fn_with_state,
@@ -20,7 +21,6 @@ use error::AppError;
 use handlers::{
     auth::*,
     chat::*,
-    index_handler,
     messages::{download_file_handler, list_message_handler, send_message_handler, upload_handler},
     workspace::list_workspace_users_handler,
 };
@@ -29,6 +29,8 @@ use models::*;
 use openapi::OpenApiRouter;
 use std::{fmt::Debug, ops::Deref, sync::Arc};
 use tokio::fs;
+use tower_http::cors;
+use tower_http::cors::CorsLayer;
 
 #[derive(Debug, Clone)]
 pub struct AppState {
@@ -105,6 +107,17 @@ pub async fn get_router(state: AppState) -> Result<Router, AppError> {
                 .patch(update_chat_handler),
         );
 
+    let cors = CorsLayer::new()
+        .allow_methods(vec![
+            Method::GET,
+            Method::POST,
+            Method::PUT,
+            Method::DELETE,
+            Method::PATCH,
+        ])
+        .allow_origin(cors::Any)
+        .allow_headers(cors::Any);
+
     let api = Router::new()
         .route("/users", get(list_workspace_users_handler))
         .nest("/chat", chat_router)
@@ -116,17 +129,17 @@ pub async fn get_router(state: AppState) -> Result<Router, AppError> {
         .layer(from_fn_with_state(state.clone(), verify_token::<AppState>))
         // 这里是因为登陆和注册还没有token，所以不需要验证token
         .route("/signin", post(signin_handler))
-        .route("/signup", post(signup_handler));
+        .route("/signup", post(signup_handler))
+        .layer(cors);
 
     let app = Router::new()
         .openapi()
-        .route("/", get(index_handler))
+        // .route("/", get(index_handler))
         .nest("/api", api)
         .with_state(state);
 
     Ok(set_layer(app))
 }
-
 #[cfg(feature = "test-util")]
 pub mod test_utils {
     use super::*;
@@ -154,11 +167,7 @@ pub mod test_utils {
         }
     }
     async fn get_test_pool(url: Option<&str>) -> (TestPg, PgPool) {
-        let url = if let Some(url) = url {
-            url
-        } else {
-            "postgre://zackjchen:postgres@localhost:5432"
-        };
+        let url = url.unwrap_or("postgre://zackjchen:postgres@localhost:5432");
         let tdb: TestPg = TestPg::new(url.into(), std::path::Path::new("../migrations"));
         let pool = tdb.get_pool().await;
 

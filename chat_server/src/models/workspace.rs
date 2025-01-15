@@ -14,6 +14,14 @@ impl AppState {
         Ok::<WorkSpace, AppError>(ws)
     }
 
+    pub async fn find_workspace_by_id(&self, id: i64) -> Result<Option<WorkSpace>, AppError> {
+        let ws = sqlx::query_as("select * from workspaces where id = $1")
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await?;
+        Ok(ws)
+    }
+
     pub async fn find_workspace_by_name(
         &self,
         name: impl Into<String>,

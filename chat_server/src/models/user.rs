@@ -3,7 +3,7 @@ use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
 };
-use chat_core::User;
+use chat_core::{User, WorkSpace};
 use serde::{Deserialize, Serialize};
 use std::mem;
 use utoipa::{IntoParams, ToSchema};
@@ -96,8 +96,8 @@ impl AppState {
         };
 
         // 这里需要通过workspace的name去找id然后插入
-        let user: User = sqlx::query_as(
-            r#"insert into users (fullname, email, password_hash, ws_id) values ($1, $2, $3, $4) returning id, ws_id, fullname, email, created_at"#
+        let mut user: User = sqlx::query_as(
+            r#"insert into users (fullname, email, password_hash, ws_id) values ($1, $2, $3, $4) returning id, ws_id,fullname, email, created_at"#
         )
         .bind(&input.fullname)
         .bind(&input.email)
@@ -105,7 +105,7 @@ impl AppState {
         .bind(ws.id)
         .fetch_one(&self.pool)
         .await?;
-
+        user.ws_name = ws.name.clone();
         Ok(user)
     }
 
@@ -122,6 +122,8 @@ impl AppState {
                 let password_hash = mem::take(&mut user.password_hash).unwrap_or_default();
                 let is_valid = verify_password(&input.password, &password_hash)?;
                 if is_valid {
+                    let ws: WorkSpace = self.find_workspace_by_id(user.ws_id).await?.unwrap();
+                    user.ws_name = ws.name;
                     Ok(Some(user))
                 } else {
                     Ok(None)

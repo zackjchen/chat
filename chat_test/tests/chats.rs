@@ -86,7 +86,7 @@ impl ChatServer {
         let form = Form::new().part("file", files);
         let rep = self
             .client
-            .post(&format!("http://{}/api/upload", self.addr))
+            .post(format!("http://{}/api/upload", self.addr))
             .header("Authorization", format!("Bearer {}", self.token))
             .multipart(form)
             .send()
@@ -103,7 +103,7 @@ impl ChatServer {
         .to_string();
         let res = self
             .client
-            .post(&format!(
+            .post(format!(
                 "http://{}/api/chat/{}/messages",
                 self.addr, chat_id
             ))
