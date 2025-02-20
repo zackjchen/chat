@@ -515,6 +515,7 @@ dependencies = [
  "axum",
  "chat-core",
  "chat-server",
+ "chrono",
  "futures",
  "notify-server",
  "reqwest",
@@ -1663,6 +1664,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "tokio-stream",
+ "tower-http",
  "tracing",
  "tracing-subscriber",
 ]

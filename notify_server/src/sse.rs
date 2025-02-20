@@ -13,7 +13,7 @@ use futures::stream::Stream;
 use jwt_simple::reexports::serde_json;
 use tokio::sync::broadcast;
 use tokio_stream::{wrappers::BroadcastStream, StreamExt};
-use tracing::debug;
+use tracing::info;
 
 use crate::AppState;
 
@@ -42,7 +42,7 @@ pub(crate) async fn sse_handler(
             AppEvent::NewMessage(_) => "NewMessage",
         };
         let v = serde_json::to_string(&v).expect("failed to serialize event");
-        debug!("sending event {} :{:?}", name, v);
+        info!("sending event {} :{:?}", name, v);
 
         Ok(Event::default().data(v).event(name))
     });

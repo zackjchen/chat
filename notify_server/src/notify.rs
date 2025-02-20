@@ -9,7 +9,7 @@ use tokio_stream::StreamExt;
 use tracing::{info, warn};
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "event")] // 序列化enum时，根据tag字段的值来标识序列化的variant
+#[serde(tag = "event", rename_all = "camelCase")] // 序列化enum时，根据tag字段的值来标识序列化的variant
 pub enum AppEvent {
     NewChat(Chat),
     AddToChat(Chat),
@@ -30,6 +30,7 @@ struct ChatUpdated {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct MessageCreated {
     members: Vec<u64>,
     message: Message,
@@ -81,7 +82,8 @@ impl Notification {
                 })
             }
             "message_added" => {
-                let payload = serde_json::from_str::<MessageCreated>(payload)?;
+                info!("payload: {}", payload);
+                let payload = serde_json::from_str::<MessageCreated>(payload).unwrap();
                 info!("Message created: {:?}", payload);
                 // let user_ids = payload.members.iter().map(|id| *id).collect();
                 let user_ids = payload.members.iter().copied().collect();

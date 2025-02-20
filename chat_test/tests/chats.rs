@@ -1,5 +1,6 @@
 use anyhow::Result;
-use chat_core::{Chat, Message};
+use chat_core::{Chat, ChatType, Message};
+use chrono::{DateTime, Utc};
 use futures::StreamExt;
 use reqwest::{
     multipart::{Form, Part},
@@ -74,7 +75,11 @@ impl ChatServer {
             .send()
             .await?;
         assert_eq!(resp.status(), StatusCode::CREATED);
-        let chat: Chat = resp.json().await?;
+        let data = resp.text().await?;
+        let data = serde_json::from_str::<Chat2>(&data)?;
+        let chat2 = serde_json::to_string(&data)?;
+
+        let chat: Chat = serde_json::from_str(&chat2)?;
         Ok(chat)
     }
 
@@ -113,7 +118,13 @@ impl ChatServer {
             .send()
             .await?;
         assert_eq!(res.status(), StatusCode::OK);
-        let message: Message = res.json().await?;
+        // let message: Message = res.json().await?;
+
+        let data = res.text().await?;
+        let data = serde_json::from_str::<Message2>(&data)?;
+        let message2 = serde_json::to_string(&data)?;
+        let message: Message = serde_json::from_str(&message2)?;
+
         assert_eq!(message.content, "hello");
         assert_eq!(message.files, file_urls);
         Ok(message)
@@ -137,14 +148,16 @@ impl NotifyServer {
 
         tokio::spawn(async move {
             while let Some(event) = es.next().await {
-                println!("event: {:?}", event);
                 match event {
                     Ok(Event::Open) => {
                         println!("Connection Open");
                     }
                     Ok(Event::Message(msg)) => match msg.event.as_str() {
                         "NewChat" => {
-                            let message: Chat = serde_json::from_str(&msg.data).unwrap();
+                            let data = serde_json::from_str::<Chat2>(&msg.data).unwrap();
+                            let chat2 = serde_json::to_string(&data).unwrap();
+                            let message: Chat = serde_json::from_str(&chat2).unwrap();
+                            // let message: Chat = serde_json::from_str(&msg.data).unwrap();
                             assert_eq!(message.name.unwrap(), "zack group");
                             assert_eq!(message.members, vec![2, 3, 4, 5, 6]);
                         }
@@ -171,16 +184,37 @@ impl NotifyServer {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[serde(rename_all(deserialize = "camelCase"))]
+pub struct Chat2 {
+    pub id: i64,
+    pub ws_id: i64,
+    pub r#type: ChatType,
+    pub name: Option<String>,
+    pub members: Vec<i64>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[serde(rename_all(deserialize = "camelCase"))]
+pub struct Message2 {
+    pub id: i64,
+    pub chat_id: i64,
+    pub sender_id: i64,
+    pub content: String,
+    pub files: Vec<String>,
+    pub created_at: DateTime<Utc>,
+}
+
 #[tokio::test]
 async fn chat_server_should_work() -> anyhow::Result<()> {
     // _tdb is 需要整个生命周期都存在，所以不能用放到new里面，不然会被drop
     let (tdb, state) = chat_server::AppState::new_for_test().await?;
     let server = ChatServer::new(state).await?;
-    println!("server: {:?}", tdb.url());
     NotifyServer::new(&tdb.url(), &server.token).await?;
-    let chat = server.create_chat().await?;
+    let chat = server.create_chat().await.unwrap();
     // println!("chat: {:?}", chat);
-    let _message = server.create_message(chat.id as u64).await?;
+    let _message = server.create_message(chat.id as u64).await.unwrap();
     sleep(Duration::from_secs(1)).await;
 
     Ok(())

@@ -56,6 +56,7 @@ pub(crate) async fn signin_handler(
     Json(input): Json<SigninUser>,
 ) -> Result<impl IntoResponse, AppError> {
     let user = state.verify_user(input).await?;
+
     match user {
         Some(user) => {
             let token = state.ek.sign(user)?;

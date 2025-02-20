@@ -16,8 +16,9 @@ pub struct CreateMessage {
 #[into_params(parameter_in = Query)]
 pub struct ListMessages {
     // pub chat_id: i64,
-    #[param(nullable)]
+    #[serde(default)]
     pub last_id: Option<i64>,
+    #[serde(default)]
     pub limit: u64,
 }
 
@@ -65,6 +66,10 @@ impl AppState {
         opts: ListMessages,
     ) -> Result<Vec<Message>, AppError> {
         let last_id = opts.last_id.unwrap_or(i64::MAX);
+        let limit = match opts.limit {
+            1..100 => opts.limit,
+            _ => 100,
+        };
         let messages = sqlx::query_as(
             r#"
             SELECT id, chat_id, sender_id, content, files, created_at
@@ -77,7 +82,7 @@ impl AppState {
         )
         .bind(chat_id as i64)
         .bind(last_id)
-        .bind(opts.limit as i64)
+        .bind(limit as i64)
         .fetch_all(&self.pool)
         .await?;
 

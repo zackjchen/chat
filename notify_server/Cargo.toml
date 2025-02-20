@@ -21,3 +21,4 @@ tracing-subscriber =  {workspace = true}
 chat-core = { path = "../chat_core" }
 jwt-simple = {workspace = true}
 dashmap = "6.1.0"
+tower-http = { workspace = true }

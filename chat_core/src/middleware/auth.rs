@@ -10,7 +10,7 @@ use axum_extra::{
     TypedHeader,
 };
 use serde::Deserialize;
-use tracing::warn;
+use tracing::{info, warn};
 #[derive(Debug, Deserialize)]
 struct Params {
     access_token: String,
@@ -27,7 +27,10 @@ where
             Err(e) => {
                 if e.is_missing() {
                     match Query::<Params>::from_request_parts(&mut parts, &state).await {
-                        Ok(params) => params.access_token.clone(),
+                        Ok(params) => {
+                            info!("Success to get params access_token: {:?}", params);
+                            params.access_token.clone()
+                        }
                         Err(e) => {
                             let msg = format!("failed to get params access_token: {}", e);
                             warn!(msg);

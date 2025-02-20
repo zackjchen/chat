@@ -1,3 +1,4 @@
 /target
 /chat_server/test.rest
 /tmp
+.DS_Store
